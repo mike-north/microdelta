@@ -42,6 +42,8 @@ import type { IAnySuppliedStepDeclaration, ISuppliedStepRegistration } from './s
 import { slotSubject, supplyState } from './slot.js';
 import { bindTemplates, instancePrefixOf, isMemberStep, type IAnyTemplateDeclaration, type IBoundTemplates, type ITemplateRecords, type ITemplateTopology } from './template.js';
 import { copyDescriptor, isTemplateDescriptor, parseWitness } from './witness.js';
+import { bindTraversals } from './traversal.js';
+import type { ITraversalBinding, ITraversalDeclaration, ITraversalRecords } from './traversal.js';
 import type { IInvocationArguments, IInvocationWitness, IUnsupportedWitnessReason } from './witness.js';
 
 /**
@@ -110,6 +112,8 @@ export interface ICompositionOptions<TFamily extends IBindingFamily> {
   readonly supplied?: readonly (ISuppliedStepRegistration<TFamily> | ISuppliedSourceRegistration<TFamily>)[];
   /** Fanout templates, each bound to a keyed collection source among the composition-level steps. */
   readonly templates?: readonly IAnyTemplateDeclaration<TFamily>[];
+  /** One selected root acquisition relationship, composed before any run authority exists. */
+  readonly traversals?: readonly ITraversalDeclaration<TFamily>[];
 }
 
 /**
@@ -222,7 +226,7 @@ export interface ITopology {
   readonly inputs: readonly string[];
   /** Declared callable (helper) slot names, sorted; a repeated slot appears once. */
   readonly helpers: readonly string[];
-  /** Supplied step slot names that some parent declares, sorted, whether or not they are currently supplied. */
+  /** Supplied slot names declared by a parent or root traversal, sorted, whether or not currently supplied. */
   readonly slots: readonly string[];
   /** Fanout templates, sorted by template slot. */
   readonly templates: readonly ITemplateTopology[];
@@ -230,6 +234,8 @@ export interface ITopology {
   readonly folds: readonly IFoldTopology[];
   /** Outcome (tolerant) folds and the template steps they consume, in structural order. */
   readonly outcomeFolds: readonly IFoldTopology[];
+  /** Fixed root acquisition correspondence; each binding has exactly one query and strict consumer. */
+  readonly traversals: readonly ITraversalBinding[];
 }
 
 /**
@@ -293,6 +299,8 @@ export interface ICompositionState<TFamily extends IBindingFamily> {
   readonly templates: IBoundTemplates<TFamily>;
   /** The template step descriptor each strict or outcome fold consumes, by the fold's descriptor key. */
   readonly folds: ReadonlyMap<string, IBindingDescriptor>;
+  /** Genuine declared relationship tokens mapped to their unique frozen participants. */
+  readonly traversals: ReadonlyMap<object, ITraversalBinding>;
 }
 
 /** Nonzero while a composition is being constructed; framework resolution must reject then. */
@@ -356,6 +364,7 @@ export function composeIn<TFamily extends IBindingFamily>(
   compositions: WeakMap<object, ICompositionState<TFamily>>,
   options: ICompositionOptions<TFamily>,
   templates: ITemplateRecords<TFamily>,
+  traversals: ITraversalRecords<TFamily>,
 ): IComposition<TFamily> {
   composing++;
   try {
@@ -370,6 +379,7 @@ export function composeIn<TFamily extends IBindingFamily>(
       members: 'invalid-descriptor',
       supplied: 'invalid-descriptor',
       templates: 'invalid-descriptor',
+      traversals: 'invalid-descriptor',
     });
     const scope = nonempty(optionFields.get('scope'), 'scope');
     const registrations = new Map<string, IRegistration<TFamily>[]>();
@@ -542,6 +552,16 @@ export function composeIn<TFamily extends IBindingFamily>(
         reject('illegal-edge', `Callable slot ${slot} is declared as a supplied step slot and also registered as a helper.`);
       }
     }
+    const traversalBindings = bindTraversals(traversals, listOf(optionFields.get('traversals'), 'traversals', true), {
+      scope, steps: compositionSteps, templates: boundTemplates,
+      target: (descriptor) => {
+        const occupants = registrations.get(descriptorKey(descriptor)) ?? [];
+        return occupants.length === 1 ? occupants[0]?.target : undefined;
+      },
+    });
+    for (const binding of traversalBindings.values()) {
+      declaredSlots.add(binding.page.slot);
+    }
     const topology: ITopology = Object.freeze({
       steps: Object.freeze([...steps].sort(compareDescriptors)),
       edges: Object.freeze([...edges].sort((left, right) => compareDescriptors(left.parent, right.parent) || compareDescriptors(left.child, right.child))),
@@ -551,6 +571,7 @@ export function composeIn<TFamily extends IBindingFamily>(
       templates: boundTemplates.topology,
       folds: Object.freeze(foldTopology.sort((left, right) => compareDescriptors(left.fold, right.fold))),
       outcomeFolds: Object.freeze(outcomeFoldTopology.sort((left, right) => compareDescriptors(left.fold, right.fold))),
+      traversals: Object.freeze([...traversalBindings.values()]),
     });
     const frozenRegistrations: ReadonlyMap<string, readonly IRegistration<TFamily>[]> = new Map(
       [...registrations].map(([key, occupants]) => [key, Object.freeze(occupants)]),
@@ -634,7 +655,7 @@ export function composeIn<TFamily extends IBindingFamily>(
       },
     };
     Object.freeze(composition);
-    compositions.set(composition, { scope, registrations: frozenRegistrations, templates: boundTemplates, folds });
+    compositions.set(composition, { scope, registrations: frozenRegistrations, templates: boundTemplates, folds, traversals: traversalBindings });
     // The brand is type-level only; this module is its sole minting authority.
     return composition as IComposition<TFamily>;
   } finally {

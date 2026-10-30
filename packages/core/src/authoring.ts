@@ -43,6 +43,8 @@ import type {
   IMemberBinding as IDefinitionMemberBinding,
   IMemberBuilder as IDefinitionMemberBuilder,
   IPathInput as IDefinitionPathInput,
+  IRootAcquisitionWitness as IDefinitionRootAcquisitionWitness,
+  ITraversalDeclaration as IDefinitionTraversalDeclaration,
   ISkippedEntry as IDefinitionSkippedEntry,
   ISlotSubject as IDefinitionSlotSubject,
   IStepSlot as IDefinitionStepSlot,
@@ -88,6 +90,12 @@ export type IAuthoring<TInputs extends object, THelpers extends object> = IDecla
  * @alpha
  */
 export type IComposition<TInputs extends object, THelpers extends object> = IDefinitionComposition<IAuthoringFamily<TInputs, THelpers>>;
+
+/** A fixed query/page/collection/template/strict-fold relationship, without run authority. @alpha */
+export type ITraversalDeclaration<TInputs extends object, THelpers extends object> = IDefinitionTraversalDeclaration<IAuthoringFamily<TInputs, THelpers>>;
+
+/** A genuine composition-local relationship witness; each run still supplies its own live authority. @alpha */
+export type IRootAcquisitionWitness<TInputs extends object, THelpers extends object> = IDefinitionRootAcquisitionWitness<IAuthoringFamily<TInputs, THelpers>>;
 
 /**
  * A structural step address: analysis scope, role, slot and explicit member key.

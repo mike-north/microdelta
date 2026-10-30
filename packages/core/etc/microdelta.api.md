@@ -122,6 +122,7 @@ import type { IRetryFacts as IRetryFacts_2 } from '@microdelta/supervision';
 import type { IRetryHistory as IRetryHistory_2 } from '@microdelta/supervision';
 import type { IRetryOutcome as IRetryOutcome_2 } from '@microdelta/supervision';
 import type { IRetrySourceScope as IRetrySourceScope_2 } from '@microdelta/supervision';
+import type { IRootAcquisitionWitness as IRootAcquisitionWitness_2 } from '@microdelta/definition';
 import type { IRun } from '@microdelta/supervision';
 import type { IRunContext as IRunContext_2 } from '@microdelta/supervision';
 import type { IRunEvent as IRunEvent_2 } from '@microdelta/supervision';
@@ -154,6 +155,10 @@ import type { ISuppliedStepDeclaration as ISuppliedStepDeclaration_2 } from '@mi
 import type { ISuppliedStepRegistration as ISuppliedStepRegistration_2 } from '@microdelta/definition';
 import type { ITrackedHelpers as ITrackedHelpers_2 } from '@microdelta/resolution';
 import type { ITrackedView as ITrackedView_2 } from '@microdelta/tracking';
+import type { ITraversalAdaptation as ITraversalAdaptation_2 } from '@microdelta/supervision';
+import type { ITraversalAdapter as ITraversalAdapter_2 } from '@microdelta/supervision';
+import type { ITraversalDeclaration as ITraversalDeclaration_2 } from '@microdelta/definition';
+import type { ITraversalReport as ITraversalReport_2 } from '@microdelta/supervision';
 import type { IUntrackedRead as IUntrackedRead_2 } from '@microdelta/resolution';
 import type { IWaitEvent as IWaitEvent_2 } from '@microdelta/supervision';
 import type { IWriterWaitOptions as IWriterWaitOptions_2 } from '@microdelta/supervision';
@@ -595,6 +600,9 @@ export type IRetryOutcome = IRetryOutcome_2;
 export type IRetrySourceScope = IRetrySourceScope_2;
 
 // @alpha
+export type IRootAcquisitionWitness<TInputs extends object, THelpers extends object> = IRootAcquisitionWitness_2<IAuthoringFamily<TInputs, THelpers>>;
+
+// @alpha
 export type IRunContext = IRunContext_2;
 
 // @alpha
@@ -689,6 +697,18 @@ export type ITrackedHelpers<THelpers extends object> = ITrackedHelpers_2<THelper
 
 // @alpha
 export type ITrackedView<T> = ITrackedView_2<T>;
+
+// @alpha
+export type ITraversalAdaptation = ITraversalAdaptation_2;
+
+// @alpha
+export type ITraversalAdapter = ITraversalAdapter_2;
+
+// @alpha
+export type ITraversalDeclaration<TInputs extends object, THelpers extends object> = ITraversalDeclaration_2<IAuthoringFamily<TInputs, THelpers>>;
+
+// @alpha
+export type ITraversalReport = ITraversalReport_2;
 
 // @alpha
 export interface IUnknownUsage {

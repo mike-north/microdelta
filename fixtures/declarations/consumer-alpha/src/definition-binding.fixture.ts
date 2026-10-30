@@ -132,8 +132,8 @@ const composition = compose({
 /** True only when two types are mutually identical (rejects never/any collapse). */
 type IExact<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
 const summaryResult: IExact<ReturnType<typeof adaSummary.run>, Promise<{ value: string }>> = true;
-const sourceContext: IExact<Parameters<typeof adaActivity.run>[0], IFacadeFamily['source'] & { readonly previous: { readonly data: ITrackedView<IActivity> } | undefined }> = true;
-const finalityContext: IExact<Parameters<NonNullable<typeof adaActivity.finality>>[0], IFacadeFamily['source'] & { readonly previous: { readonly data: ITrackedView<IActivity> } }> = true;
+const sourceContext: IExact<Parameters<typeof adaActivity.run>[0], IFacadeFamily['source'] & { readonly previous: { readonly data: ITrackedView<IActivity> } | undefined; readonly evidence?: ITrackedView<IActivity> }> = true;
+const finalityContext: IExact<Parameters<NonNullable<typeof adaActivity.finality>>[0], IFacadeFamily['source'] & { readonly previous: { readonly data: ITrackedView<IActivity> }; readonly evidence?: ITrackedView<IActivity> }> = true;
 // Controls: the exactness check rejects a different view and the never collapse.
 const controlDifferent: IExact<ITrackedView<IActivity>, ITrackedView<IProfile>> = false;
 const controlNever: IExact<never, ITrackedView<IActivity>> = false;
@@ -142,6 +142,34 @@ void sourceContext;
 void finalityContext;
 void controlDifferent;
 void controlNever;
+
+/** Both callback contexts expose the result's tracked evidence view or absence. */
+const runEvidenceRead: IExact<Parameters<typeof adaActivity.run>[0]['evidence'], ITrackedView<IActivity> | undefined> = true;
+const finalityEvidenceRead: IExact<Parameters<NonNullable<typeof adaActivity.finality>>[0]['evidence'], ITrackedView<IActivity> | undefined> = true;
+void runEvidenceRead;
+void finalityEvidenceRead;
+
+/** Generated-alpha contexts preserve optionality, result typing and immutable supply for both callbacks. */
+declare const runEvidenceContext: Parameters<typeof adaActivity.run>[0];
+declare const finalityEvidenceContext: Parameters<NonNullable<typeof adaActivity.finality>>[0];
+/** A valid replacement isolates readonly rejection from evidence optionality and result typing. */
+declare const replacementEvidence: ITrackedView<IActivity>;
+// @ts-expect-error: run evidence may be absent and cannot satisfy a required view.
+const requiredRunEvidence: ITrackedView<IActivity> = runEvidenceContext.evidence;
+// @ts-expect-error: finality evidence may be absent despite its required previous carrier.
+const requiredFinalityEvidence: ITrackedView<IActivity> = finalityEvidenceContext.evidence;
+// @ts-expect-error: activity run evidence is not the profile result view.
+const foreignRunEvidence: ITrackedView<IProfile> | undefined = runEvidenceContext.evidence;
+// @ts-expect-error: activity finality evidence is not the profile result view.
+const foreignFinalityEvidence: ITrackedView<IProfile> | undefined = finalityEvidenceContext.evidence;
+// @ts-expect-error: the supplied run evidence slot cannot be replaced by another valid view.
+runEvidenceContext.evidence = replacementEvidence;
+// @ts-expect-error: the supplied finality evidence slot cannot be replaced by another valid view.
+finalityEvidenceContext.evidence = replacementEvidence;
+void requiredRunEvidence;
+void requiredFinalityEvidence;
+void foreignRunEvidence;
+void foreignFinalityEvidence;
 
 // ------------------------------------------------------ RESOLUTION stand-in --
 

@@ -107,6 +107,8 @@ export const bindingPaths = Object.freeze({
   previous: Object.freeze(['previous']),
   argument: Object.freeze(['argument']),
   member: Object.freeze(['member']),
+  /** One request's captured frontier, available only to its declared collection source. */
+  sourceEvidence: Object.freeze(['source-evidence']),
   callable: (slot: string): readonly string[] => Object.freeze(['callable', slot]),
   child: (slot: string): readonly string[] => Object.freeze(['child', slot]),
   call: (index: number): readonly string[] => Object.freeze(['call', String(index)]),

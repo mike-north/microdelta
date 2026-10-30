@@ -16,7 +16,11 @@ export const reportFixtureImports = {
   meta: { type: 'problem', schema: [], messages: { forbidden: 'PKG-004: report fixtures use public package entries and their owned controlled application only.', loader: 'PKG-004: report fixtures cannot acquire Node module-loader factories that bypass public package entries.' } },
   create(context) {
     /** Compiled fixture declarations remain beneath the fixture's owned tree. */
-    const owned = [path.resolve(context.cwd, 'fixtures/contribution-report'), path.resolve(context.cwd, 'examples/contribution-report/src/controlled')];
+    const slice = path.resolve(context.cwd, 'fixtures/within-person-slice');
+    const relative = path.relative(slice, context.filename);
+    const withinSlice = relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
+    // Each oracle owns only its concrete application; adding one never grants the other a cross-fixture edge.
+    const owned = withinSlice ? [slice] : [path.resolve(context.cwd, 'fixtures/contribution-report'), path.resolve(context.cwd, 'examples/contribution-report/src/controlled')];
     /** Only explicit factory access is recognized; ordinary payload strings and supplied callables keep their meaning. */
     function loaderKey(key, computed) {
       return !computed && key.type === 'Identifier' && key.name === 'createRequire' || key.type === 'Literal' && key.value === 'createRequire';

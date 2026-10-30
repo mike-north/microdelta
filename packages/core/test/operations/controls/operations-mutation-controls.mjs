@@ -164,8 +164,8 @@ const controls = [
     name: 'a woken pass with a deadline fails busy at once instead of waiting up to the deadline',
     directory: supervision, file: 'supervision.js',
     edits: [
-      { anchor: 'function leaseForPass() {\n                return writerLease();\n            }', replacement: "function leaseForPass(number) {\n                if (number > 1 && writerPolicy.deadline !== undefined) {\n                    const attempt = writer.tryLease();\n                    if (attempt.kind !== 'acquired') {\n                        throw new SupervisionError('writer-busy', 'woken pass gave up');\n                    }\n                    return Promise.resolve(attempt.lease);\n                }\n                return writerLease();\n            }" },
-      { anchor: 'lease = await leaseForPass();', replacement: 'lease = await leaseForPass(number);' },
+      { anchor: "function leaseForPass(observeStop) {\n                return writerLease(observeStop);\n            }", replacement: "function leaseForPass(number, observeStop) {\n                if (number > 1 && writerPolicy.deadline !== undefined) {\n                    const attempt = writer.tryLease();\n                    if (attempt.kind !== 'acquired') {\n                        throw new SupervisionError('writer-busy', 'woken pass gave up');\n                    }\n                    return Promise.resolve(attempt.lease);\n                }\n                return writerLease(observeStop);\n            }" },
+      { anchor: "lease = await leaseForPass(number === 1 ? request.firstLeaseStopped : undefined);", replacement: "lease = await leaseForPass(number, number === 1 ? request.firstLeaseStopped : undefined);" },
     ],
   },
   {
@@ -173,8 +173,8 @@ const controls = [
     name: 'a woken pass without a deadline returns waiting instead of waiting for the lease',
     directory: supervision, file: 'supervision.js',
     edits: [
-      { anchor: 'function leaseForPass() {\n                return writerLease();\n            }', replacement: "function leaseForPass(number) {\n                if (number > 1 && writerPolicy.deadline === undefined) {\n                    const attempt = writer.tryLease();\n                    return Promise.resolve(attempt.kind === 'acquired' ? attempt.lease : undefined);\n                }\n                return writerLease();\n            }" },
-      { anchor: 'lease = await leaseForPass();', replacement: "lease = await leaseForPass(number);\n                    if (lease === undefined) {\n                        return previous;\n                    }" },
+      { anchor: "function leaseForPass(observeStop) {\n                return writerLease(observeStop);\n            }", replacement: "function leaseForPass(number, observeStop) {\n                if (number > 1 && writerPolicy.deadline === undefined) {\n                    const attempt = writer.tryLease();\n                    return Promise.resolve(attempt.kind === 'acquired' ? attempt.lease : undefined);\n                }\n                return writerLease(observeStop);\n            }" },
+      { anchor: "lease = await leaseForPass(number === 1 ? request.firstLeaseStopped : undefined);", replacement: "lease = await leaseForPass(number, number === 1 ? request.firstLeaseStopped : undefined);\n                    if (lease === undefined) {\n                        return previous;\n                    }" },
     ],
   },
   {

@@ -9,6 +9,9 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { assertSourceDigest, digest, fileEntries, planRepository, shardNumber, sourceDigest, validateAggregate, validateBundle, validateIdentity } from './pr-ci.mjs';
 
+/** These ordinary cases own a fresh Jest process so unrelated retained memory cannot spend their selected RSS bound. */
+const boundedCoreRegressionSuite = 'packages/core/.test-build/test/within-person/regression.test.js';
+
 /** Only the calling checkout and current run attempt can consume prepared work. */
 export async function workflowIdentity(root, environment = process.env) {
   const git = (...args) => {
@@ -140,7 +143,7 @@ export async function restoreBundle(root, bundle, identity, plan, shard) {
   return digest(JSON.stringify(manifest));
 }
 
-/** Each consumer is serial, with one Jest invocation per ordinary config partition. */
+/** Each consumer remains serial; the bounded core regression owns its existing file obligation in a fresh Jest partition. */
 export async function executeShard(root, identity, plan, shard, bundle) {
   shard = shardNumber(shard);
   const planned = plan.shards[shard - 1];
@@ -164,10 +167,20 @@ export async function executeShard(root, identity, plan, shard, bundle) {
           // then publication, keeping both in one serial consumer.
           group.sort((a, b) => Number(b.file.includes('sqlite-capability')) - Number(a.file.includes('sqlite-capability')));
           for (const suite of group) await measured(timings, suite.id, () => command(root, 'node', ['--experimental-vm-modules', 'node_modules/jest/bin/jest.js', '--config', path.join(root, item.group), '--runInBand', '--runTestsByPath', path.join(root, suite.file)], item.cwd));
+          executed.push(...group.map(suite => suite.id));
         } else {
-          await measured(timings, item.group, () => command(root, 'node', ['--experimental-vm-modules', 'node_modules/jest/bin/jest.js', '--config', path.join(root, item.group), '--runInBand', '--runTestsByPath', ...group.map(suite => path.join(root, suite.file))], item.cwd));
+          // Absolute case RSS is measured within the selected regression's normal Jest process.
+          // Keep unrelated suites serial in their existing partition and preserve every original obligation ID.
+          const batches = item.group === 'packages/core/jest.config.mjs'
+            ? [group.filter(suite => suite.file !== boundedCoreRegressionSuite), group.filter(suite => suite.file === boundedCoreRegressionSuite)].filter(batch => batch.length > 0)
+            : [group];
+          for (const batch of batches) {
+            const timing = batch.length === 1 && batch[0].file === boundedCoreRegressionSuite ? batch[0].id : item.group;
+            await measured(timings, timing, () => command(root, 'node', ['--experimental-vm-modules', 'node_modules/jest/bin/jest.js', '--config', path.join(root, item.group), '--runInBand', '--runTestsByPath', ...batch.map(suite => path.join(root, suite.file))], item.cwd));
+            // A later partition failure must retain only the obligations whose actual commands succeeded.
+            executed.push(...batch.map(suite => suite.id));
+          }
         }
-        executed.push(...group.map(suite => suite.id));
       } else {
         await measured(timings, item.id, () => item.kind === 'shell'
           ? command(root, 'sh', ['-c', item.script], item.cwd)

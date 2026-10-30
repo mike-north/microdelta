@@ -187,6 +187,8 @@ export function ownFactProvider(options: {
   readonly arguments?: readonly IArgumentValue[];
   /** A template instance's current member record; absent for any other step, or a member no longer keyed. */
   readonly member?: object | undefined;
+  /** Immutable evidence already captured for this exact collection-source request. */
+  readonly sourceEvidence?: object | undefined;
 }): ICurrentFactProvider {
   let view: ITracked<object> | undefined;
   const inputs = (): ITracked<object> => {
@@ -195,6 +197,7 @@ export function ownFactProvider(options: {
   };
   let argumentView: ITracked<object> | undefined;
   let memberView: ITracked<object> | undefined;
+  let evidenceView: ITracked<object> | undefined;
   const currentArguments = (values: readonly IArgumentValue[]): ITracked<object> => {
     argumentView ??= options.validation.tracked(argumentList(values), { path: bindingPaths.argument });
     return argumentView;
@@ -202,6 +205,11 @@ export function ownFactProvider(options: {
   return Object.freeze({
     resolve(binding: ITrackingBinding, request: ICurrentFactRequest): ICurrentFactResolution {
       const [root, slot, ...rest] = binding.path;
+      if (root === 'source-evidence' && slot === undefined && rest.length === 0
+        && (request.kind === 'selected' || request.kind === 'materialized-output') && options.sourceEvidence !== undefined) {
+        evidenceView ??= options.validation.tracked(options.sourceEvidence, { path: bindingPaths.sourceEvidence });
+        return selectFrom(options.validation, evidenceView, request);
+      }
       if (root === 'self' && slot === undefined && request.kind === 'implementation' && request.address.length === 0) {
         return { kind: 'available', fact: options.self };
       }

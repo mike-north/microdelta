@@ -23,6 +23,7 @@ import type { IAsyncContextCapability, ISha256Capability, ITrackingObservation, 
 
 import type { ResolutionError } from './errors.js';
 import type { IResolutionFamily } from './family.js';
+import type { IRequestSourceEvidence, ITraversalResolutionPort, ITraversalRunAuthority } from './root-acquisition.js';
 
 /**
  * The History operations Resolution uses. Candidate lookup, exact envelopes,
@@ -287,6 +288,8 @@ export interface IResolutionOptions<TInputs extends object, THelpers extends obj
    * proceed) and fan-out members resolve one at a time.
    */
   readonly execution?: IExecutionSupervision;
+  /** Run-owned identity/root admission for restricted traversal; absent on ordinary unsupervised owners. */
+  readonly traversalAuthority?: ITraversalRunAuthority;
 }
 
 /**
@@ -613,6 +616,10 @@ export interface IFoldRequest {
   readonly requestKey: string;
   /** History's current writer lease for this run. */
   readonly lease: IWriterLease;
+  /** Immutable captured frontier; only the exact declared strict consumer may receive it. */
+  readonly sourceEvidence?: IRequestSourceEvidence;
+  /** Original normal request association, retained while History pass keys vary on resumption. */
+  readonly normalRequestKey?: string;
 }
 
 /**
@@ -843,6 +850,8 @@ export interface IOutcomeFoldResolution {
  * @alpha
  */
 export interface IResolution {
+  /** Optional restricted acquisition/capture port, present only with run-owned root authority. */
+  readonly traversals?: ITraversalResolutionPort;
   /**
    * Resolve one source or memo step under current policy, reusing or
    * executing through admission. A strict fold is resolved by `resolveFold`

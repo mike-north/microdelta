@@ -133,6 +133,9 @@ import type {
   IRunObserver as ISupervisionRunObserver,
   IRunResult as ISupervisionRunResult,
   IStrictFoldOutcome as ISupervisionStrictFoldOutcome,
+  ITraversalAdapter as ISupervisionTraversalAdapter,
+  ITraversalAdaptation as ISupervisionTraversalAdaptation,
+  ITraversalReport as ISupervisionTraversalReport,
   ISupervisionErrorCode as ISupervisionErrorCodeOf,
 } from '@microdelta/supervision';
 
@@ -230,6 +233,15 @@ export type IGateEvidence = IResolutionGateEvidence;
  * @alpha
  */
 export type IFoldReport = ISupervisionFoldReport;
+
+/** A response-only adapter of the fixed declared root source, with no transport authority. @alpha */
+export type ITraversalAdapter = ISupervisionTraversalAdapter;
+
+/** One page's next frontier and advertised continuation or discovery closure. @alpha */
+export type ITraversalAdaptation = ISupervisionTraversalAdaptation;
+
+/** Acquisition termination and its last immutable strict-fold report remain separate facts. @alpha */
+export type ITraversalReport = ISupervisionTraversalReport;
 
 /**
  * A strict fold's typed outcome in a run: `succeeded` with its settled
@@ -1006,6 +1018,7 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
           admission: ports.admission,
           observer: ports.observer,
           execution: ports.execution,
+          traversalAuthority: ports.traversalAuthority,
         }),
       };
       const invoke = <T>(live: IRun, body: (run: IWorkspaceRun) => T): T => {
@@ -1019,6 +1032,7 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
           resolve: live.resolve,
           resolveMembers: live.resolveMembers,
           resolveFold: live.resolveFold,
+          traverse: live.traverse,
           resolveOutcomeFold: live.resolveOutcomeFold,
           check: live.check,
           recover: live.recover,

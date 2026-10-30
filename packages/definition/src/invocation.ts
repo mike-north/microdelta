@@ -36,6 +36,7 @@ import type {
   IMemberAccess,
   IPreviousSupplier,
   ISourceDeclaration,
+  ISourceEvidenceSupplier,
 } from './declaration.js';
 import { reject } from './declaration.js';
 import type { IBindingDescriptor } from './descriptor.js';
@@ -232,9 +233,9 @@ export interface ISourceInvocation<TFamily extends IBindingFamily> extends IInvo
    * instance requires `member`, whose view of the instance's member record
    * becomes the context's member binding; any other source rejects one.
    */
-  apply<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily> | undefined, invoke: IAuthorInvoker<TOutcome>, member?: IMemberSupplier<TFamily>): TOutcome;
+  apply<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily> | undefined, invoke: IAuthorInvoker<TOutcome>, member?: IMemberSupplier<TFamily>, evidence?: ISourceEvidenceSupplier<TFamily>): TOutcome;
   /** Hand the actual author `finality` and its context (with the member binding, for an instance) to the invoker. */
-  applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>, member?: IMemberSupplier<TFamily>): TOutcome;
+  applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>, member?: IMemberSupplier<TFamily>, evidence?: ISourceEvidenceSupplier<TFamily>): TOutcome;
 }
 
 /**
@@ -342,13 +343,13 @@ export function openInvocationIn<TFamily extends IBindingFamily>(
         open = false;
       },
       hasFinality: record.declaration.finality !== undefined,
-      apply: (bindings, previous, invoke, member) => {
+      apply: (bindings, previous, invoke, member, evidence) => {
         assertApplicable();
-        return record.apply(bindings, previous, invoke, memberAccess(member));
+        return record.apply(bindings, previous, invoke, memberAccess(member), evidence);
       },
-      applyFinality: (bindings, previous, invoke, member) => {
+      applyFinality: (bindings, previous, invoke, member, evidence) => {
         assertApplicable();
-        return record.applyFinality(bindings, previous, invoke, memberAccess(member));
+        return record.applyFinality(bindings, previous, invoke, memberAccess(member), evidence);
       },
     };
     return Object.freeze(invocation);

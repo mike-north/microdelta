@@ -11,6 +11,36 @@ import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 import { partitionObligations, shardNumber, validateBundle, validateAggregate, validateGraph } from './pr-ci.mjs';
 
+test('#301 focused regression maps to one ordinary core owner without another default invocation', async () => {
+  const { planRepository } = await import('./pr-ci.mjs');
+  const plan = await planRepository(root);
+  const workspace = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+  const regression = 'jest:packages/core/test/within-person/regression.test.ts';
+  const alias = 'test:within-person:regression';
+  const command = 'tsc -p packages/core/tsconfig.test.json && node --experimental-vm-modules node_modules/jest/bin/jest.js --config packages/core/jest.config.mjs --runInBand --runTestsByPath packages/core/.test-build/test/within-person/regression.test.js';
+  assert.equal(workspace.scripts[alias], command);
+  assert.equal(plan.catalog.graph.scripts[`.:${alias}`], command);
+  const owned = plan.obligations.filter(item => item.id === regression);
+  assert.equal(owned.length, 1);
+  assert.equal(owned[0].group, 'packages/core/jest.config.mjs');
+  assert.equal(owned[0].file, 'packages/core/.test-build/test/within-person/regression.test.js');
+  assert.equal(plan.shards.flat().filter(id => id === regression).length, 1);
+
+  // The focused command names the existing ordinary owner. Default entrypoints
+  // reach that owner through core's ordinary suite and never invoke it again.
+  const reachable = new Set();
+  const visit = name => {
+    if (reachable.has(name)) return;
+    reachable.add(name);
+    for (const match of (workspace.scripts[name] ?? '').matchAll(/npm run ([\w:-]+)/gu)) visit(match[1]);
+  };
+  for (const name of ['build', 'check', 'test', 'build:pr-ci', 'test:pr-ci', 'test:pr-ci:aggregate']) visit(name);
+  assert.equal(reachable.has(alias), false);
+  assert.equal(reachable.has('qualify:within-person'), false);
+  assert.ok(!plan.obligations.some(item => item.id.includes('qualify:within-person') || item.file?.includes('exp-within-person-discovery/.test-build/test/')));
+  assert.ok(!Object.values(plan.catalog.graph.scripts).some(script => script.includes('/test/parent.js') || script.includes('coordinator.js')));
+});
+
 test('a complete partition retains all four expected isolated shards', () => {
   assert.deepEqual(partitionObligations(['a', 'b'], { a: 1, b: 4 }), [[ 'a' ], [], [], [ 'b' ]]);
   assert.equal(shardNumber('4'), 4);
@@ -616,4 +646,174 @@ test('adding an earlier fixture file preserves offline CLI co-location and prere
     assert.equal(plan.shards.flat().filter(id => id === fixture.id).length, 1);
     assert.ok(plan.obligations.some(item => item.id === 'jest:fixtures/contribution-report/000-before-cli.test.ts'));
   } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+
+/** Capture the actual package shell argv without compiling or running a workload. */
+async function coreScriptDispatch(script) {
+  const { mkdir, chmod } = await import('node:fs/promises');
+  const directory = await mkdtemp(path.join(tmpdir(), 'microdelta-core-script-route-'));
+  const trace = path.join(directory, 'dispatch.jsonl');
+  await mkdir(path.join(directory, 'packages/core'), { recursive: true });
+  await mkdir(path.join(directory, 'node_modules/jest/bin'), { recursive: true });
+  await mkdir(path.join(directory, 'bin'), { recursive: true });
+  const record = type => `const fs=require('node:fs');fs.appendFileSync(${JSON.stringify(trace)},JSON.stringify({type:${JSON.stringify(type)},args:process.argv.slice(2)})+String.fromCharCode(10));`;
+  await writeFile(path.join(directory, 'node_modules/jest/bin/jest.js'), record('jest'));
+  const compiler = path.join(directory, 'bin/tsc');
+  await writeFile(compiler, ['#!/usr/bin/env node', record('tsc')].join(String.fromCharCode(10)));
+  await chmod(compiler, 0o755);
+  try {
+    const result = spawnSync('sh', ['-c', script], { cwd: path.join(directory, 'packages/core'), encoding: 'utf8',
+      env: { ...process.env, PATH: [path.join(directory, 'bin'), path.dirname(process.execPath), process.env.PATH ?? ''].join(path.delimiter) } });
+    assert.equal(result.status, 0, result.stderr);
+    return (await readFile(trace, 'utf8')).trim().split(String.fromCharCode(10)).map(line => JSON.parse(line));
+  } finally { await rm(directory, { recursive: true, force: true }); }
+}
+
+/** A fresh core root makes discovery independent of any retained repository emission. */
+async function coreInventoryFixture() {
+  const { mkdir, realpath } = await import('node:fs/promises');
+  const { sourceFiles } = await import('./pr-ci.mjs');
+  const directory = await realpath(await mkdtemp(path.join(tmpdir(), 'microdelta-core-inventory-')));
+  const coreDirectory = path.join(directory, 'packages/core');
+  await mkdir(coreDirectory, { recursive: true });
+  await writeFile(path.join(coreDirectory, 'jest.config.mjs'), await readFile(path.join(root, 'packages/core/jest.config.mjs')));
+  const files = sourceFiles(root).filter(file => file.startsWith('packages/core/test/') && file.endsWith('.test.ts'));
+  const expected = files.map(file => path.join(directory, file.replace('/test/', '/.test-build/test/').replace(/[.]ts$/u, '.js'))).sort();
+  for (const filename of expected) {
+    await mkdir(path.dirname(filename), { recursive: true });
+    await writeFile(filename, 'throw new Error("Inert discovery modules must never execute");');
+  }
+  return { directory, coreDirectory, expected };
+}
+
+test('#301 default core dispatch owns one fresh bounded regression invocation and complete other-suite discovery', async () => {
+  const core = JSON.parse(await readFile(path.join(root, 'packages/core/package.json'), 'utf8'));
+  const command = 'node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand';
+  const emitted = '.test-build/test/within-person/regression.test.js';
+  // The shell must preserve one separator expression for native and Windows-shaped paths.
+  const backslash = String.fromCharCode(92);
+  const separator = `[/${backslash.repeat(2)}]`;
+  const pattern = `(^|${separator})packages${separator}core${separator}[.]test-build${separator}test${separator}within-person${separator}regression[.]test[.]js$`;
+  const expected = `tsc -p tsconfig.test.json && ${command} --testPathIgnorePatterns "${pattern.replaceAll(backslash, backslash.repeat(2))}" && ${command} --runTestsByPath ${emitted}`;
+  // Validate the complete allowed command before executing its inert shell stand-ins.
+  assert.equal(core.scripts['test:unit'], expected);
+  const calls = await coreScriptDispatch(core.scripts['test:unit']);
+  assert.deepEqual(calls.map(call => call.type), ['tsc', 'jest', 'jest']);
+  assert.deepEqual(calls[0].args, ['-p', 'tsconfig.test.json']);
+  const general = calls[1].args;
+  const dedicated = calls[2].args;
+  assert.ok(general.includes('--runInBand') && dedicated.includes('--runInBand'));
+  assert.equal(general.includes('--runTestsByPath'), false);
+  assert.deepEqual(dedicated.slice(dedicated.indexOf('--runTestsByPath')), ['--runTestsByPath', emitted]);
+  const ignored = new RegExp(general[general.indexOf('--testPathIgnorePatterns') + 1]);
+  for (const filename of ['/repo/packages/core/.test-build/test/within-person/regression.test.js', ['C:', 'repo', 'packages', 'core', '.test-build', 'test', 'within-person', 'regression.test.js'].join(backslash)]) assert.equal(ignored.test(filename), true, filename);
+  for (const filename of ['/repo/packages/other/.test-build/test/within-person/regression.test.js', '/repo/packages/core/.test-build/test/within-person/regression-extra.test.js', '/repo/packages/core/.test-build/test/within-person/regression.testXjs', '/repo/packages/core/.test-build/test/within-person/regression.test.js/extra']) assert.equal(ignored.test(filename), false, filename);
+
+  // Installed Jest reads a fresh inert inventory with the actual config; no owner module can run here.
+  const fixture = await coreInventoryFixture();
+  try {
+    const inventory = args => {
+      const result = spawnSync(process.execPath, [path.join(root, 'node_modules/jest/bin/jest.js'), ...args, '--listTests', '--json'], { cwd: fixture.coreDirectory, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 });
+      assert.equal(result.status, 0, result.stderr);
+      return JSON.parse(result.stdout).sort();
+    };
+    const all = inventory(['--config', 'jest.config.mjs', '--runInBand']);
+    const ordinary = inventory(general);
+    const isolated = inventory(dedicated);
+    const target = path.join(fixture.coreDirectory, emitted);
+    assert.deepEqual(all, fixture.expected);
+    assert.deepEqual(isolated, [target]);
+    assert.equal(ordinary.includes(target), false);
+    assert.equal(new Set([...ordinary, ...isolated]).size, all.length);
+    assert.deepEqual([...ordinary, ...isolated].sort(), all);
+  } finally { await rm(fixture.directory, { recursive: true, force: true }); }
+});
+
+/** A prepared source-bound shard uses inert Jest argv recording, never the real regression module. */
+async function isolatedCoreShard(suiteFiles, fail = 'none') {
+  const { mkdir } = await import('node:fs/promises');
+  const { sourceDigest, fileEntries, digest } = await import('./pr-ci.mjs');
+  const directory = await sourceFixture();
+  await writeFile(path.join(directory, '.gitignore'), ['.pr-ci/', 'bundle/', 'packages/*/dist/', 'packages/*/.test-build/', 'node_modules/', 'jest-dispatch.jsonl', ''].join(String.fromCharCode(10)));
+  await mkdir(path.join(directory, 'node_modules/jest/bin'), { recursive: true });
+  const trace = path.join(directory, 'jest-dispatch.jsonl');
+  const bounded = 'packages/core/.test-build/test/within-person/regression.test.js';
+  await writeFile(path.join(directory, 'node_modules/jest/bin/jest.js'), `
+const fs=require('node:fs');const path=require('node:path');const args=process.argv.slice(2);
+const files=args.slice(args.indexOf('--runTestsByPath')+1).map(file=>path.relative(${JSON.stringify(directory)},file).split(path.sep).join('/'));
+fs.appendFileSync(${JSON.stringify(trace)},JSON.stringify({args,files,cwd:process.cwd()})+String.fromCharCode(10));
+if(${JSON.stringify(fail)}==='ordinary'&&files.some(file=>file!==${JSON.stringify(bounded)}))process.exit(7);
+if(${JSON.stringify(fail)}==='regression'&&files.includes(${JSON.stringify(bounded)}))process.exit(8);
+`);
+  const fixtureIdentity = { ...identity, sourceDigest: await sourceDigest(directory) };
+  const output = 'packages/core/.test-build';
+  const obligations = suiteFiles.map(file => ({ id: `jest:${file.replace('/.test-build/', '/').replace(/[.]js$/u, '.ts')}`, kind: 'jest', group: 'packages/core/jest.config.mjs', file, cwd: 'packages/core', output }));
+  const plan = { digest: digest('bounded core routing fixture'), catalog: { commonOutputs: [] }, obligations, shards: [obligations.map(item => item.id), [], [], []] };
+  for (const file of suiteFiles) {
+    const target = path.join(directory, 'bundle/outputs', file);
+    await mkdir(path.dirname(target), { recursive: true }); await writeFile(target, 'export {};');
+  }
+  const manifest = { schema: 1, identity: fixtureIdentity, shard: 1, planDigest: plan.digest, outputs: [output], entries: await fileEntries(path.join(directory, 'bundle/outputs')) };
+  await writeFile(path.join(directory, 'bundle/manifest.json'), JSON.stringify(manifest));
+  return { directory, trace, identity: fixtureIdentity, plan, bundle: path.join(directory, 'bundle') };
+}
+
+/** The real bounded obligation retains its canonical file identity across every shard shape. */
+const boundedCoreSuite = 'packages/core/.test-build/test/within-person/regression.test.js';
+/** A neighboring name must remain in the ordinary partition rather than matching by prefix. */
+const neighboringCoreSuite = 'packages/core/.test-build/test/within-person/regression-adjacent.test.js';
+for (const [name, files, expected] of [
+  ['absent', [neighboringCoreSuite], [[neighboringCoreSuite]]],
+  ['only', [boundedCoreSuite], [[boundedCoreSuite]]],
+  ['mixed', [boundedCoreSuite, neighboringCoreSuite], [[neighboringCoreSuite], [boundedCoreSuite]]],
+]) test(`#301 PR core routing ${name} keeps exact ownership without empty or duplicate dispatch`, async () => {
+  const { executeShard } = await import('./pr-ci-runner.mjs');
+  const fixture = await isolatedCoreShard(files);
+  try {
+    const receipt = await executeShard(fixture.directory, fixture.identity, fixture.plan, 1, fixture.bundle);
+    const calls = (await readFile(fixture.trace, 'utf8')).trim().split(String.fromCharCode(10)).map(line => JSON.parse(line));
+    assert.deepEqual(calls.map(call => call.files), expected);
+    assert.ok(calls.every(call => call.args.includes('--runInBand') && call.args.includes('--runTestsByPath')));
+    assert.deepEqual(calls.flatMap(call => call.files).sort(), [...files].sort());
+    assert.equal(receipt.status, 'success'); assert.deepEqual(receipt.executed, fixture.plan.shards[0]);
+    assert.equal(new Set(receipt.executed).size, files.length);
+    assert.deepEqual(JSON.parse(await readFile(path.join(fixture.directory, '.pr-ci/receipt-1.json'), 'utf8')).executed, fixture.plan.shards[0]);
+  } finally { await rm(fixture.directory, { recursive: true, force: true }); }
+});
+
+for (const failed of ['ordinary', 'regression']) test(`#301 PR ${failed} failure never receives credit or silently starts the next partition`, async () => {
+  const { executeShard } = await import('./pr-ci-runner.mjs');
+  const fixture = await isolatedCoreShard([boundedCoreSuite, neighboringCoreSuite], failed);
+  try {
+    await assert.rejects(executeShard(fixture.directory, fixture.identity, fixture.plan, 1, fixture.bundle), /Command failed/u);
+    const calls = (await readFile(fixture.trace, 'utf8')).trim().split(String.fromCharCode(10)).map(line => JSON.parse(line));
+    assert.deepEqual(calls.map(call => call.files), failed === 'ordinary' ? [[neighboringCoreSuite]] : [[neighboringCoreSuite], [boundedCoreSuite]]);
+    const receipt = JSON.parse(await readFile(path.join(fixture.directory, '.pr-ci/receipt-1.json'), 'utf8'));
+    assert.equal(receipt.status, 'failure');
+    const ordinaryId = fixture.plan.obligations.find(item => item.file === neighboringCoreSuite).id;
+    assert.deepEqual(receipt.executed, failed === 'ordinary' ? [] : [ordinaryId]);
+    assert.equal(receipt.executed.includes(fixture.plan.obligations.find(item => item.file === boundedCoreSuite).id), false);
+  } finally { await rm(fixture.directory, { recursive: true, force: true }); }
+});
+
+/** The separately released facade proof is compiled/linted source, never an ordinary runtime obligation. */
+test('#315 bounded facade proof has strict source ownership without automatic runtime execution', async () => {
+  const { planRepository } = await import('./pr-ci.mjs');
+  const plan = await planRepository(root);
+  const workspace = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+  const config = 'fixtures/within-person-slice/jest.config.mjs';
+  assert.equal(workspace.scripts['qualify:within-person-slice'], `node --experimental-vm-modules node_modules/jest/bin/jest.js --config ${config} --runInBand`);
+  assert.ok(workspace.scripts['build:fixtures'].includes('tsc -p fixtures/within-person-slice/tsconfig.json'));
+  assert.ok(workspace.scripts['check:fixtures'].includes('tsc --noEmit -p fixtures/within-person-slice/tsconfig.json && eslint fixtures/within-person-slice'));
+  assert.ok(plan.catalog.excluded[config]);
+  assert.equal(plan.obligations.some(item => item.file?.includes('within-person-slice') || item.group === config), false);
+  const reachable = new Set();
+  const visit = name => {
+    if (reachable.has(name)) return;
+    reachable.add(name);
+    for (const match of (workspace.scripts[name] ?? '').matchAll(/npm run ([\w:-]+)/gu)) visit(match[1]);
+  };
+  for (const name of ['build', 'check', 'test', 'build:pr-ci', 'test:pr-ci', 'test:pr-ci:aggregate']) visit(name);
+  assert.equal(reachable.has('qualify:within-person-slice'), false);
 });

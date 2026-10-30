@@ -6,6 +6,7 @@
 
 import type { IAdmissionRequest } from '@microdelta/resolution';
 import type { IBindingDescriptor } from '@microdelta/definition';
+import type { IBindingFamily } from '@microdelta/definition';
 import type { ICheckOutcome } from '@microdelta/resolution';
 import type { IClockCapability } from '@microdelta/machine';
 import type { ICompleteOutcomeFoldCoverage } from '@microdelta/resolution';
@@ -24,9 +25,11 @@ import type { IRecoveryResult } from '@microdelta/resolution';
 import type { IResolution } from '@microdelta/resolution';
 import type { IResolutionOutcome } from '@microdelta/resolution';
 import type { IResolveRequest } from '@microdelta/resolution';
+import type { IRootAcquisitionWitness } from '@microdelta/definition';
 import type { ISqliteCapability } from '@microdelta/machine';
 import type { ISqliteReadCapability } from '@microdelta/machine';
 import type { ITimerCapability } from '@microdelta/machine';
+import type { ITraversalRunAuthority } from '@microdelta/resolution';
 import type { ResolutionError } from '@microdelta/resolution';
 
 // @alpha
@@ -597,6 +600,7 @@ export interface IResolutionPorts {
     readonly admission: IExecutionAdmission;
     readonly execution: IExecutionSupervision;
     readonly observer: ILifecycleObserver;
+    readonly traversalAuthority: ITraversalRunAuthority;
 }
 
 // @alpha
@@ -680,6 +684,7 @@ export interface IRun {
     resolveMembers(target: IMembersTarget, request: IRequestOptions): Promise<IMembersReport>;
     resolveOutcomeFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IOutcomeFoldReport>;
     settleOperation(settlement: IOperationSettlement): Promise<IOperationView>;
+    traverse<TFamily extends IBindingFamily>(witness: IRootAcquisitionWitness<TFamily>, adapter: ITraversalAdapter, request: IRequestOptions): Promise<ITraversalReport>;
 }
 
 // @alpha
@@ -747,7 +752,7 @@ export interface IRunObserver {
 }
 
 // @alpha
-export type IRunOperationName = 'check' | 'inspectOperations' | 'ordinary' | 'read' | 'recover' | 'resolve' | 'resolveFold' | 'resolveMembers' | 'resolveOutcomeFold' | 'settleOperation' | 'promote' | 'promotions';
+export type IRunOperationName = 'check' | 'inspectOperations' | 'ordinary' | 'read' | 'recover' | 'resolve' | 'resolveFold' | 'traverse' | 'resolveMembers' | 'resolveOutcomeFold' | 'settleOperation' | 'promote' | 'promotions';
 
 // @alpha
 export interface IRunOperationPorts {
@@ -1030,6 +1035,36 @@ export interface ISupervisionOptions {
     readonly sharedRates?: ISharedRateDispatchOptions;
     readonly timer?: IRunTimer;
 }
+
+// @alpha
+export type ITraversalAdaptation = {
+    readonly kind: 'continue';
+    readonly frontier: object;
+    readonly continuation: readonly string[];
+} | {
+    readonly kind: 'complete';
+    readonly frontier: object;
+};
+
+// @alpha
+export interface ITraversalAdapter {
+    // (undocumented)
+    accept(page: object, previousFrontier: object | undefined): ITraversalAdaptation;
+}
+
+// @alpha
+export type ITraversalReport = {
+    readonly kind: 'complete';
+    readonly report: IFoldReport;
+} | {
+    readonly kind: 'discovery-failed';
+    readonly error: unknown;
+    readonly report?: IFoldReport;
+} | {
+    readonly kind: 'stopped';
+    readonly reason: string;
+    readonly report?: IFoldReport;
+};
 
 // @alpha
 export interface IWaitEvent {

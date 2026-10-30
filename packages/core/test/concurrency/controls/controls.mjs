@@ -227,8 +227,8 @@ export const controls = Object.freeze([
     target: runTestTarget,
     group: 'supervision',
     edits: [{
-      anchor: 'function leaseForPass() {\n                return writerLease();\n            }',
-      replacement: "function leaseForPass() {\n                const tried = writer.tryLease();\n                if (tried.kind !== 'acquired') {\n                    throw new SupervisionError('writer-busy', 'single try without waiting');\n                }\n                return Promise.resolve(tried.lease);\n            }",
+      anchor: "function leaseForPass(observeStop) {\n                return writerLease(observeStop);\n            }",
+      replacement: "function leaseForPass(observeStop) {\n                const tried = writer.tryLease();\n                if (tried.kind !== 'acquired') {\n                    throw new SupervisionError('writer-busy', 'single try without waiting');\n                }\n                return Promise.resolve(tried.lease);\n            }",
     }],
   },
   {
@@ -238,7 +238,7 @@ export const controls = Object.freeze([
     target: waitTarget,
     rejectedBy: [{ test: '(C3)', message: ['q1WhileQ0Holds', '"kind": "busy"'] }],
     edits: [{
-      anchor: 'await sleepUntil(timer, nextAttemptAt(now, attempt, wait.policy), wait.stop, wait.runId);',
+      anchor: "await sleepUntil(timer, nextAttemptAt(now, attempt, wait.policy), wait.stop, wait.runId, wait.stopped);",
       replacement: 'throw new WriterBusyError(attempt, deadline ?? now);',
     }],
   },

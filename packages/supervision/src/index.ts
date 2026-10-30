@@ -63,6 +63,9 @@ export type {
   ISendPhase,
   ISendRequest,
   IStrictFoldOutcome,
+  ITraversalAdapter,
+  ITraversalAdaptation,
+  ITraversalReport,
   ISupervision,
   ISupervisionOptions,
 } from './contracts.js';

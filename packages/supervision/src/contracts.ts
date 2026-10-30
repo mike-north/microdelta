@@ -18,7 +18,7 @@
  * result; its identifier is volatile metadata and never participates in reuse
  * evidence.
  */
-import type { IBindingDescriptor } from '@microdelta/definition';
+import type { IBindingDescriptor, IBindingFamily, IRootAcquisitionWitness } from '@microdelta/definition';
 import type { IApplicationStatementSubmission, IExecutionObservationHost, IObservedRun } from './observation.js';
 import type { ISourceRetryPolicy } from './operations.js';
 import type {
@@ -37,6 +37,7 @@ import type {
   IResolution,
   IResolutionOutcome,
   IResolveRequest,
+  ITraversalRunAuthority,
   ResolutionError,
 } from '@microdelta/resolution';
 
@@ -221,6 +222,8 @@ export interface IWriterWaitOptions {
  * @alpha
  */
 export interface IResolutionPorts {
+  /** Live root authority for the fixed declared traversal; never parent invocation authority. */
+  readonly traversalAuthority: ITraversalRunAuthority;
   /**
    * Admission of work current validation could not avoid. Stop intent
    * cancels it, except that during a soft stop's drain the first attempt of a
@@ -666,6 +669,8 @@ export interface IRun {
    * no body, admits no fold work and publishes nothing.
    */
   resolveFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IFoldReport>;
+  /** Coordinate one fixed root relationship inside this run's ordinary policies and owned lifetime. */
+  traverse<TFamily extends IBindingFamily>(witness: IRootAcquisitionWitness<TFamily>, adapter: ITraversalAdapter, request: IRequestOptions): Promise<ITraversalReport>;
   /**
    * Resolve one outcome (tolerant) fold and report it: every current member
    * of the consumed template step progresses independently first; then,
@@ -760,11 +765,39 @@ export type IRunOperationName =
   | 'recover'
   | 'resolve'
   | 'resolveFold'
+  | 'traverse'
   | 'resolveMembers'
   | 'resolveOutcomeFold'
   | 'settleOperation'
   | 'promote'
   | 'promotions';
+
+/**
+ * A pure response adapter selects the next immutable collection evidence and
+ * an advertised continuation field path. It receives no transport, raw root
+ * argument or current-run capability, and cannot certify library membership.
+ * @alpha
+ */
+export interface ITraversalAdapter {
+  accept(page: object, previousFrontier: object | undefined): ITraversalAdaptation;
+}
+
+/** One accepted page either advertises another cursor or closes discovery. @alpha */
+export type ITraversalAdaptation =
+  | { readonly kind: 'continue'; readonly frontier: object; readonly continuation: readonly string[] }
+  | { readonly kind: 'complete'; readonly frontier: object };
+
+/**
+ * Acquisition's terminal result is separate from each immutable strict-fold
+ * report. Healthy closed discovery does not upgrade a denied, failed or
+ * waiting fold into successful completion. Producer failure preserves its
+ * original cause and any last request report without rewriting that report.
+ * @alpha
+ */
+export type ITraversalReport =
+  | { readonly kind: 'complete'; readonly report: IFoldReport }
+  | { readonly kind: 'discovery-failed'; readonly error: unknown; readonly report?: IFoldReport }
+  | { readonly kind: 'stopped'; readonly reason: string; readonly report?: IFoldReport };
 
 /**
  * A send a hard stop aborted, with its recorded remote state.

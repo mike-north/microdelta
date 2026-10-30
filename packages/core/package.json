@@ -37,7 +37,7 @@
     "check:types": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p ../../fixtures/declarations/source-call/tsconfig.json",
     "check:lint": "eslint .",
     "test": "npm run test:unit && npm run test:types && npm run test:controls",
-    "test:unit": "tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand",
+    "test:unit": "tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand --testPathIgnorePatterns \"(^|[/\\\\\\\\])packages[/\\\\\\\\]core[/\\\\\\\\][.]test-build[/\\\\\\\\]test[/\\\\\\\\]within-person[/\\\\\\\\]regression[.]test[.]js$\" && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand --runTestsByPath .test-build/test/within-person/regression.test.js",
     "test:types": "tsd",
     "test:controls": "node --test test/durable-history/controls/control-outcome.test.mjs test/acceptance/controls/paths.test.mjs test/concurrency/controls/controls.test.mjs test/durable-history/controls/anchor-check.test.mjs test/resolution/controls/resolution-mutation-controls.test.mjs"
   },

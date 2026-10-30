@@ -1,5 +1,18 @@
 # @microdelta/supervision
 
+## 0.6.0
+### Minor Changes
+
+- 871c9e2: Require Node.js 24 or later for all microdelta packages. Runtimes older than Node.js 24 are no longer supported.
+
+### Patch Changes
+
+- Updated dependencies [641758d]
+- Updated dependencies [871c9e2]
+  - @microdelta/machine@0.5.0
+  - @microdelta/definition@0.5.0
+  - @microdelta/resolution@0.5.0
+
 ## 0.5.0
 ### Minor Changes
 

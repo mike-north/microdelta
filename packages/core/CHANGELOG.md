@@ -1,5 +1,19 @@
 # microdelta
 
+## 0.7.0
+### Minor Changes
+
+- fbf320c: Add private-alpha declared traversal relationships, run-owned page acquisition,
+  immutable frontier capture and concurrent ordinary member resolution. Preserve
+  truthful discovery failure, source currentness and soft/hard stop ownership.
+
+### Patch Changes
+
+- Updated dependencies [fbf320c]
+  - @microdelta/definition@0.6.0
+  - @microdelta/resolution@0.6.0
+  - @microdelta/supervision@0.7.0
+
 ## 0.6.0
 ### Minor Changes
 

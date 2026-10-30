@@ -16,7 +16,7 @@ import { writerFor } from '../../src/writer.js';
 import { fakeTimer, T0, until } from '../operations/harness.js';
 import type { ITraversalReport } from '../../src/index.js';
 import { analysis, composeFixture, createControlledService, environment, logicalStore, primaryMember } from './fixture.js';
-import { beforeRunTerminates, createFailureLatch, finalizeCase, formatFailureDiagnostic, requireResourceBounds } from './guard.js';
+import { beforeRunTerminates, createFailureLatch, finalizeCase, formatFailureDiagnostic, requireResourceBounds, writeCaseOutput } from './guard.js';
 import type { IResourceSample } from './guard.js';
 import { createTrace } from './trace.js';
 import type { ITrace, ITraceEvent } from './trace.js';
@@ -30,31 +30,6 @@ async function within<T>(value: Promise<T>, deadline: number, label: string): Pr
   } finally { if (timer !== undefined) { clearTimeout(timer); } }
 }
 
-
-/** Output completion is observed within the case deadline; the sink is never assumed to accept diagnostics. */
-async function writeCaseOutput(text: string, deadline: number): Promise<void> {
-  const writing = new Promise<void>((resolve, reject) => {
-    let failure: { readonly cause: unknown } | undefined;
-    let finishing = false;
-    /** Observe callback and stream errors through the same event turn before releasing the temporary listener. */
-    const finish = (cause?: Error | null): void => {
-      if (cause !== undefined && cause !== null) { failure ??= { cause }; }
-      if (finishing) { return; }
-      finishing = true;
-      setImmediate(() => {
-        process.stderr.off('error', onError);
-        if (failure === undefined) { resolve(); } else { reject(failure.cause); }
-      });
-    };
-    const onError = (cause: Error): void => { finish(cause); };
-    process.stderr.once('error', onError);
-    try { process.stderr.write(text, finish); }
-    catch (cause: unknown) {
-      process.stderr.off('error', onError); reject(cause);
-    }
-  });
-  await within(writing, deadline, 'bounded case output');
-}
 
 /** A Resolution pass is the real request, capture token and returned owner result. */
 interface IRecordedPass {

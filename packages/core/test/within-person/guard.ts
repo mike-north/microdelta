@@ -1,4 +1,7 @@
 /** Resource and acknowledgment safeguards belong to the ordinary test harness, never domain policy. */
+import { stderr } from 'node:process';
+import { Writable } from 'node:stream';
+
 import type { ITraceEvent } from './trace.js';
 
 /** Exact process and fixture-store byte observations for one ordinary case. @internal */
@@ -133,4 +136,37 @@ export async function finalizeCase(request: ICaseFinalizationRequest): Promise<I
     catch (cause: unknown) { outputFailed = true; retain('diagnostic-output', cause); }
   }
   return snapshot();
+}
+
+
+/** Output completion remains mandatory within the case deadline; a sink return value is not acknowledgment. @internal */
+export async function writeCaseOutput(text: string, deadline: number, stream: Writable = stderr): Promise<void> {
+  const writing = new Promise<void>((resolve, reject) => {
+    let failure: { readonly cause: unknown } | undefined;
+    let finishing = false;
+    /** Observe callback and stream errors through the same event turn before releasing the temporary listener. */
+    const finish = (cause?: Error | null): void => {
+      if (cause !== undefined && cause !== null) { failure ??= { cause }; }
+      if (finishing) { return; }
+      finishing = true;
+      setImmediate(() => {
+        stream.off('error', onError);
+        if (failure === undefined) { resolve(); } else { reject(failure.cause); }
+      });
+    };
+    const onError = (cause: Error): void => { finish(cause); };
+    stream.once('error', onError);
+    // Jest reporters can replace the stream's own write method and discard its
+    // completion callback. The genuine Writable entry preserves physical TTY/
+    // pipe completion and errors instead of accepting the reporter's Boolean.
+    try { Writable.prototype.write.call(stream, text, 'utf8', finish); }
+    catch (cause: unknown) {
+      stream.off('error', onError); reject(cause);
+    }
+  });
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const remaining = Math.max(0, deadline - Date.now());
+    await Promise.race([writing, new Promise<never>((_resolve, reject) => { timer = setTimeout(() => reject(new Error('Missing bounded case output acknowledgment')), remaining); })]);
+  } finally { if (timer !== undefined) { clearTimeout(timer); } }
 }

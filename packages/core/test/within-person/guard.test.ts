@@ -1,7 +1,10 @@
 /** Ordinary harness refusal and diagnostic controls start no owner run, store or transport. */
-import { expect, test } from '@jest/globals';
+import { stderr } from 'node:process';
+import { Writable } from 'node:stream';
 
-import { beforeRunTerminates, createFailureLatch, finalizeCase, formatFailureDiagnostic, requireResourceBounds } from './guard.js';
+import { expect, jest, test } from '@jest/globals';
+
+import { beforeRunTerminates, createFailureLatch, finalizeCase, formatFailureDiagnostic, requireResourceBounds, writeCaseOutput } from './guard.js';
 import type { ITraceEvent } from './trace.js';
 
 test('exact ordinary resource ceilings are admitted, while an excess names measured and allowed bytes', () => {
@@ -157,4 +160,99 @@ test('a recorded boundary violation still attempts both bounded output paths', a
   const state = await finalizeCase({ primary: undefined, drained: true, owners: [], removeStore: () => undefined,
     record: () => { calls.push('record'); throw original; }, metrics: async () => { calls.push('metrics'); }, diagnostic: async () => { calls.push('diagnostic'); } });
   expect(state.failure?.cause).toBe(original); expect(calls).toEqual(['record', 'metrics', 'diagnostic']);
+});
+
+
+/** A genuine Writable exposes physical completion while a reporter may replace only its public write entry. */
+interface IOutputSink {
+  readonly stream: Writable;
+  readonly chunks: readonly string[];
+  acknowledge(cause?: Error | null): void;
+}
+/** The sink records bytes at _write, never treating write's Boolean return as acknowledgment. */
+function outputSink(intercept: boolean): IOutputSink {
+  const chunks: string[] = [];
+  let complete: ((cause?: Error | null) => void) | undefined;
+  const stream = new Writable({ write(chunk: unknown, _encoding: BufferEncoding, callback: (cause?: Error | null) => void): void {
+    if (!Buffer.isBuffer(chunk)) { throw new Error('The physical output sink expects encoded bytes'); }
+    chunks.push(chunk.toString('utf8')); complete = callback;
+  } });
+  if (intercept) {
+    // Jest's installed reporters forward only chunk, discard every callback overload and return true.
+    const nativeWrite = stream.write.bind(stream);
+    Object.defineProperty(stream, 'write', { value: (chunk: unknown): boolean => nativeWrite(chunk) });
+  }
+  return { stream, chunks, acknowledge(cause): void {
+    if (complete === undefined) { throw new Error('No physical write is pending'); }
+    const acknowledgment = complete; complete = undefined; acknowledgment(cause);
+  } };
+}
+/** Native nextTick/stream errors and the harness's deferred listener release cross an actual event turn. */
+async function outputTurn(): Promise<void> {
+  await new Promise<void>(resolve => { setImmediate(resolve); });
+  await new Promise<void>(resolve => { setImmediate(resolve); });
+}
+
+test('output acknowledgment survives a reporter callback-dropping write override and still waits for physical completion', async () => {
+  jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
+  const sink = outputSink(true); const outcomes: string[] = [];
+  const writing = writeCaseOutput('actual metrics\n', Date.now() + 16_000, sink.stream)
+    .then(() => { outcomes.push('acknowledged'); }, () => { outcomes.push('failed'); });
+  try {
+    await outputTurn();
+    expect(sink.chunks).toEqual(['actual metrics\n']); expect(outcomes).toEqual([]);
+    sink.acknowledge(); await outputTurn();
+    expect(outcomes).toEqual(['acknowledged']);
+    expect(sink.stream.listenerCount('error')).toBe(0);
+  } finally {
+    jest.advanceTimersByTime(16_000); await writing; sink.stream.destroy(); jest.useRealTimers();
+  }
+});
+
+test('a genuine output callback error preserves its identity and observes the subsequent stream error turn', async () => {
+  const sink = outputSink(true); const original = new Error('physical write failed');
+  const writing = writeCaseOutput('metrics', Date.now() + 16_000, sink.stream);
+  const rejection = expect(writing).rejects.toBe(original);
+  sink.acknowledge(original); await rejection;
+  expect(sink.stream.listenerCount('error')).toBe(0);
+  sink.stream.destroy();
+});
+
+test('a stream error without callback success is a failed output acknowledgment', async () => {
+  const sink = outputSink(false); const original = new Error('stream failed');
+  const writing = writeCaseOutput('metrics', Date.now() + 16_000, sink.stream);
+  const rejection = expect(writing).rejects.toBe(original);
+  sink.stream.emit('error', original); await rejection;
+  sink.acknowledge(); await outputTurn();
+  expect(sink.stream.listenerCount('error')).toBe(0); sink.stream.destroy();
+});
+
+test('a synchronous physical output throw retains its identity and releases the temporary listener', async () => {
+  const original = new Error('physical writer threw');
+  const stream = new Writable({ write(): never { throw original; } });
+  await expect(writeCaseOutput('metrics', Date.now() + 16_000, stream)).rejects.toBe(original);
+  expect(stream.listenerCount('error')).toBe(0); stream.destroy();
+});
+
+test('missing physical output acknowledgment retains the unchanged deadline and prevents the next ordinary case', async () => {
+  jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
+  const sink = outputSink(true); const calls: string[] = []; const started = Date.now();
+  const finalizing = finalizeCase({ primary: undefined, drained: true, owners: [], removeStore: () => undefined, record: () => undefined,
+    metrics: () => writeCaseOutput('metrics', started + 16_000, sink.stream), diagnostic: async () => { calls.push('diagnostic'); } });
+  try {
+    await jest.advanceTimersByTimeAsync(15_999);
+    expect(calls).toEqual([]);
+    await jest.advanceTimersByTimeAsync(1);
+    const state = await finalizing;
+    expect(state.failure?.cause).toEqual(new Error('Missing bounded case output acknowledgment'));
+    expect(state.boundaryFailures.map(value => value.boundary)).toEqual(['metrics-output']);
+    expect(state.mayStartNext).toBe(false); expect(state.diagnosticAttempted).toBe(true); expect(calls).toEqual(['diagnostic']);
+  } finally {
+    sink.acknowledge(); await outputTurn(); sink.stream.destroy(); jest.useRealTimers();
+  }
+});
+
+
+test('actual stderr acknowledges ordinary output with its real TTY or pipe backing', async () => {
+  await writeCaseOutput(`${JSON.stringify({ kind: 'ordinary-output-acknowledgment', tty: stderr.isTTY === true, backing: stderr.constructor.name })}\n`, Date.now() + 1_000);
 });

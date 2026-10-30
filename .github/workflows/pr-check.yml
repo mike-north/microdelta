@@ -4,6 +4,10 @@ on:
   pull_request:
 permissions:
   contents: read
+# A newer revision replaces obsolete work for this PR without cancelling another PR.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 env:
   PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
 jobs:

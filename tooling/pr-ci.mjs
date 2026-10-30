@@ -332,7 +332,9 @@ function ordinaryToolingFiles(files) { return files.filter(file => /^tooling\/[^
 
 /** Whole-file routes keep the measured compiler/package checks off the default tooling consumer. */
 export function partitionToolingFiles(files) {
-  const routes = { 'tooling/quality-gates.test.mjs': 3, 'tooling/release-artifacts.test.mjs': installedPackageConsumerShard, 'tooling/declaration-boundaries.test.mjs': 1 };
+  // Keep the compiler-heavy quality and declaration probes on separate serial
+  // consumers while package installs stay with their offline CLI prerequisite.
+  const routes = { 'tooling/quality-gates.test.mjs': 1, 'tooling/release-artifacts.test.mjs': installedPackageConsumerShard, 'tooling/declaration-boundaries.test.mjs': 3 };
   for (const filename of Object.keys(routes)) {
     if (!files.includes(filename)) throw new Error(`Missing named tooling file: ${filename}`);
   }

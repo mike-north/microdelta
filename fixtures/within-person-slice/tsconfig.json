@@ -1,0 +1,16 @@
+{
+  "extends": "../../examples/contribution-report/tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": ".",
+    "outDir": ".test-build",
+    "declaration": false,
+    "sourceMap": true
+  },
+  "include": [
+    "*.ts"
+  ],
+  "exclude": [
+    ".test-build"
+  ]
+}

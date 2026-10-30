@@ -12,6 +12,7 @@ import type { IBindingDescriptor } from './descriptor.js';
 import {
   declareMemo,
   declareSource,
+  reject,
   type IAnySourceDeclaration,
   type IChildDeclarations,
   type IResultOf,
@@ -23,7 +24,10 @@ import {
 } from './declaration.js';
 import { declareSourceSlot, declareSuppliedSource, declareSupplySource, type ISourceSlot, type ISuppliedSourceDeclaration, type ISuppliedSourceOptions, type ISupplySourceOptions, type ISuppliedSourceRegistration } from './source-slot.js';
 import { forward, type IForward } from './arguments.js';
-import { composeIn, type IComposition, type ICompositionOptions, type ICompositionState } from './composition.js';
+import { composeIn, isComposing, type IComposition, type ICompositionOptions, type ICompositionState } from './composition.js';
+import { declareTraversal, resolveRootAcquisitionIn, rootAcquisitionIn, rootArgumentRecipesIn } from './traversal.js';
+import type { IRootAcquisitionWitness, ITraversalBinding, ITraversalDeclaration, ITraversalOptions, ITraversalRecords } from './traversal.js';
+import type { IInvocationArguments } from './witness.js';
 import type { IBindingFamily } from './family.js';
 import { declareFold, type IFoldDeclaration, type IFoldOptions, type IStepsOf } from './fold.js';
 import { declareOutcomeFold, type IOutcomeFoldDeclaration, type IOutcomeFoldOptions } from './outcome-fold.js';
@@ -96,6 +100,14 @@ export interface IDeclarations<TFamily extends IBindingFamily> {
   outcomeFold<TTemplate extends IAnyTemplateDeclaration<TFamily>, TStep extends keyof IStepsOf<TTemplate> & string, TResult>(
     options: IOutcomeFoldOptions<TFamily, TTemplate, TStep, TResult>,
   ): IOutcomeFoldDeclaration<TFamily, IResultOf<TFamily, IStepsOf<TTemplate>[TStep]>, TResult>;
+  /** Declare one fixed query/page/collection/template/strict-fold relationship before graph freeze. */
+  traversal(options: ITraversalOptions<TFamily>): ITraversalDeclaration<TFamily>;
+  /** Mint a composition-local root witness; run and argument authority remain with their owners. */
+  rootAcquisition(composition: IComposition<TFamily>, relationship: ITraversalDeclaration<TFamily>): IRootAcquisitionWitness<TFamily>;
+  /** Recognize the exact declared relationship without applying callbacks or computing subjects. */
+  resolveRootAcquisition(composition: IComposition<TFamily>, witness: unknown): ITraversalBinding;
+  /** Encode current query/cursor values after witness recognition, carrying the run owner's justification decision unchanged. */
+  rootArgumentRecipes(composition: IComposition<TFamily>, witness: unknown, values: readonly [unknown, string | undefined], justified: boolean): IInvocationArguments;
   /** Freeze a composition of declarations this instance minted. */
   compose(options: ICompositionOptions<TFamily>): IComposition<TFamily>;
   /** Open a live invocation of one uniquely bound step, supplied slot or template instance of a composition this instance minted. */
@@ -117,6 +129,7 @@ export function declarations<TFamily extends IBindingFamily>(): IDeclarations<TF
   const records: IDeclarationRecords<TFamily> = new WeakMap();
   const templates: ITemplateRecords<TFamily> = new WeakMap();
   const compositions = new WeakMap<object, ICompositionState<TFamily>>();
+  const traversals: ITraversalRecords<TFamily> = { declarations: new WeakMap(), witnesses: new WeakMap() };
   return Object.freeze({
     source: <TResult extends object>(options: ISourceOptions<TFamily, TResult>) => declareSource(records, options),
     memo: <TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult extends object = object>(
@@ -141,7 +154,20 @@ export function declarations<TFamily extends IBindingFamily>(): IDeclarations<TF
     outcomeFold: <TTemplate extends IAnyTemplateDeclaration<TFamily>, TStep extends keyof IStepsOf<TTemplate> & string, TResult>(
       options: IOutcomeFoldOptions<TFamily, TTemplate, TStep, TResult>,
     ) => declareOutcomeFold(records, templates, options),
-    compose: (options: ICompositionOptions<TFamily>) => composeIn(records, compositions, options, templates),
+    traversal: (options: ITraversalOptions<TFamily>) => declareTraversal(records, templates, traversals, options),
+    rootAcquisition: (composition: IComposition<TFamily>, relationship: ITraversalDeclaration<TFamily>) => {
+      if (isComposing()) { reject('composition-phase', 'Root acquisition witnesses cannot be opened while composing.'); }
+      return rootAcquisitionIn(compositions, traversals, composition, relationship);
+    },
+    resolveRootAcquisition: (composition: IComposition<TFamily>, witness: unknown) => {
+      if (isComposing()) { reject('composition-phase', 'Root acquisition witnesses cannot resolve while composing.'); }
+      return resolveRootAcquisitionIn(compositions, traversals, composition, witness);
+    },
+    rootArgumentRecipes: (composition: IComposition<TFamily>, witness: unknown, values: readonly [unknown, string | undefined], justified: boolean) => {
+      if (isComposing()) { reject('composition-phase', 'Root arguments cannot be encoded while composing.'); }
+      return rootArgumentRecipesIn(compositions, traversals, composition, witness, values, justified);
+    },
+    compose: (options: ICompositionOptions<TFamily>) => composeIn(records, compositions, options, templates, traversals),
     openInvocation: (composition: IComposition<TFamily>, parent: IBindingDescriptor, port: IInvocationPort<TFamily>) =>
       openInvocationIn(records, compositions, composition, parent, port),
     gateOf: (composition: IComposition<TFamily>, instance: IBindingDescriptor) => gateOfIn(compositions, composition, instance),

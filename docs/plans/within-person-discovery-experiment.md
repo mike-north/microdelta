@@ -1,5 +1,8 @@
 # Within-person discovery experiment charter
 
+The owner-approved [bounded private-alpha delivery](within-person-bounded-traversal-delivery.md)
+stages #315 separately; the remaining #301/WPD qualification stays open.
+
 **Standing:** supervisory-selected Candidate A correctness charter under
 [#297](https://github.com/mike-north/microdelta/issues/297) and the
 [within-person discovery plan](within-person-discovery.md). Its restricted

@@ -17,7 +17,7 @@ export default [
   {
     // Independent public-port oracles are test infrastructure. Their broader
     // inspection role grants no owner-source or deep-package import authority.
-    files: ['fixtures/contribution-report/**/*.ts', 'fixtures/contribution-report/**/*.mjs'],
+    files: ['fixtures/contribution-report/**/*.ts', 'fixtures/contribution-report/**/*.mjs', 'fixtures/within-person-slice/**/*.ts', 'fixtures/within-person-slice/**/*.mjs'],
     languageOptions: { parser: tseslint.parser },
     linterOptions: { noInlineConfig: true },
     plugins: { microdelta: { rules: { 'report-fixture-imports': reportFixtureImports } } },

@@ -121,3 +121,15 @@ test('repository gates retain fixture compile, import enforcement, type-aware li
   assert.equal(config.languageOptions.parserOptions.projectService, true);
   assert.equal(config.rules['@typescript-eslint/no-unsafe-return'][0], 2);
 });
+
+/** The bounded facade oracle owns its own files without acquiring another fixture's source tree. */
+test('#315 slice fixture accepts its own application and generated ports, refuses source escape and cross-fixture edges', async () => {
+  const file = 'fixtures/within-person-slice/worker.ts';
+  for (const source of ["import { composeFixture } from './application.js';", "import { openDurableHistory } from '@microdelta/history';", "import { openWorkspace } from 'microdelta';"]) {
+    assert.deepEqual(await errors(source, file), []);
+  }
+  for (const source of ["import * as x from '../contribution-report/fixture.js';", "import * as x from '../../packages/core/src/index.js';", "import * as x from '@microdelta/history/dist/src/index.js';", "void import(selected);", "import { createRequire } from 'node:module';"]) {
+    assert.equal((await errors(source, file)).length, 1, source);
+  }
+  assert.equal((await errors("import * as x from '../within-person-slice/application.js';")).length, 1);
+});

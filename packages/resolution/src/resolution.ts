@@ -111,6 +111,7 @@ import type {
   IAnySuppliedSourceDeclaration,
   ISourceArgumentSupplier,
   ISourcePreviousSupplier,
+  ISourceEvidenceSupplier,
   ISuppliedSourceDeclaration,
   ISuppliedSourceInvocation,
   IApply,
@@ -213,6 +214,8 @@ import {
 } from './current.js';
 import type { IArgumentValue, ICurrentSlots } from './current.js';
 import { ResolutionError, resolutionPresentation } from './errors.js';
+import { createRootAcquisition, readRequestSourceEvidence } from './root-acquisition.js';
+import type { IBoundSourceEvidence, IRootAcquisition, ITraversalResolutionPort } from './root-acquisition.js';
 import type { IResolutionErrorPresentation } from './errors.js';
 import { acceptanceRecord, bindingPaths, endingRecord, plainDescriptor, provenanceRecord, readProvenance } from './evidence.js';
 import type {
@@ -406,6 +409,8 @@ interface IRequestContext {
   readonly mode: 'normal' | 'check';
   readonly requestKey: string | undefined;
   readonly lease: IWriterLease | undefined;
+  /** The immutable source evidence captured at this normal request's boundary, shared by its descendants. */
+  readonly sourceEvidence: IBoundSourceEvidence | undefined;
   readonly slots: ICurrentSlots;
   /**
    * Immutable complete input preparations live only for this top-level
@@ -1119,11 +1124,12 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
   }
 
   /** A new request context with its declared slots reconnected once. */
-  function newRequest(mode: 'normal' | 'check', requestKey: string | undefined, lease: IWriterLease | undefined): IRequestContext {
+  function newRequest(mode: 'normal' | 'check', requestKey: string | undefined, lease: IWriterLease | undefined, sourceEvidence?: IBoundSourceEvidence): IRequestContext {
     return {
       mode,
       requestKey,
       lease,
+      sourceEvidence,
       slots: reconnectSlots(composition, bindingSlots),
       inputPreparation: { authorInputs: undefined, contentFact: undefined },
       sources: new Map(),
@@ -1134,6 +1140,18 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
       gates: new Map(),
       diagnostics: [],
     };
+  }
+
+  /** Only a declared traversal collection may consume its own request-bound evidence. */
+  function sourceEvidenceFor(request: IRequestContext, step: IBindingDescriptor): object | undefined {
+    const relationship = composition.topology.traversals.find(binding => stepKey(binding.collection) === stepKey(step));
+    if (relationship === undefined) { return undefined; }
+    const captured = request.sourceEvidence;
+    if (captured === undefined || captured.binding.slot !== relationship.slot
+      || stepKey(captured.binding.collection) !== stepKey(step)) {
+      throw new ResolutionError('invalid-request', 'A traversal collection requires its own captured normal request evidence');
+    }
+    return captured.value;
   }
 
   /** The lease of a normal request; check-only requests never write. */
@@ -1325,14 +1343,23 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
       },
     });
     const member = memberBindingOf(request, invocation.parent);
+    const currentEvidence = sourceEvidenceFor(request, invocation.parent);
+    const evidenceSupplier: ISourceEvidenceSupplier<IFamily> | undefined = currentEvidence === undefined ? undefined : Object.freeze({
+      view: <TResult>(declaration: ISourceDeclaration<IFamily, TResult, never>): IApply<IFamily['views'], TResult> => {
+        void declaration;
+        // Definition addresses the current source's result type; the owned
+        // capture was checked against that exact collection descriptor.
+        return trusted<IApply<IFamily['views'], TResult>>(tracking.tracked(currentEvidence, { path: bindingPaths.sourceEvidence }));
+      },
+    });
     return active.run(invocation, () => {
       if (which === 'finality') {
         if (supplier === undefined) {
           throw new ResolutionError('invalid-request', 'Finality needs an eligible previous result');
         }
-        return invocation.applyFinality(bindings, supplier, invoker(finish), member);
+        return invocation.applyFinality(bindings, supplier, invoker(finish), member, evidenceSupplier);
       }
-      return invocation.apply(bindings, supplier, invoker(finish, undefined, true), member);
+      return invocation.apply(bindings, supplier, invoker(finish, undefined, true), member, evidenceSupplier);
     });
   }
 
@@ -1575,6 +1602,7 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
 
   /** Resolve one source step under current policy. */
   async function resolveSource(request: IRequestContext, step: IBindingDescriptor, declaration: IAnySourceDeclaration<IFamily> | IAnySuppliedSourceDeclaration<IFamily>, call?: ISuppliedSourceCall<IFamily>): Promise<IResolvedStep> {
+    const sourceEvidence = sourceEvidenceFor(request, step);
     const evidence = newEvidence(request);
     const done = (result: IStepResult): IResolvedStep => ({ step, result, evidence });
     emit(request, evidence, step, 'verify');
@@ -1602,7 +1630,7 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
       }
       // The previous result a check read is its history, not a current input.
       const own = reading.provenance.observations.filter((item) => !isPreviousObservation(item.binding));
-      const comparison = compare(own, ownFactProvider({ validation, slots: request.slots, self: declaration.run, member: memberRecord(request, step), ...(call === undefined ? {} : { arguments: call.values }) }));
+      const comparison = compare(own, ownFactProvider({ validation, slots: request.slots, self: declaration.run, member: memberRecord(request, step), sourceEvidence, ...(call === undefined ? {} : { arguments: call.values }) }));
       if (comparison.kind === 'equal') {
         eligible = candidate;
         break;
@@ -3611,7 +3639,70 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
     return value;
   }
 
+  /** One actual run may open its declared traversal once; closure never replenishes that authority. */
+  const rootAcquisitions = new Map<string, IRootAcquisition>();
+  let traversalsDisposed = false;
+  const traversalAuthority = options.traversalAuthority;
+  const traversalPort: ITraversalResolutionPort | undefined = traversalAuthority === undefined ? undefined : Object.freeze({
+    open(witness: unknown): IRootAcquisition {
+      traversalAuthority.assertRoot();
+      const owner = traversalAuthority.currentOwner();
+      if (traversalsDisposed || owner === undefined) {
+        throw new ResolutionError('invalid-request', 'Root acquisition requires live run authority');
+      }
+      const binding = options.declarations.resolveRootAcquisition(composition, witness);
+      if (rootAcquisitions.has(binding.slot)) {
+        throw new ResolutionError('invalid-request', 'This run already opened its declared traversal');
+      }
+      const root = createRootAcquisition({
+        composition, binding, owner, authority: traversalAuthority,
+        query: () => {
+          const resolved = composition.resolve(binding.query);
+          if (resolved.status !== 'bound' || resolved.target.role !== 'input') {
+            throw new ResolutionError('invalid-request', 'The traversal query has no unique current input');
+          }
+          return resolved.target.value;
+        },
+        snapshot: (value: object): object => {
+          const owned = validation.tracked(value, { path: bindingPaths.sourceEvidence });
+          return validation.capture(() => validation.snapshotOutput(owned)).value;
+        },
+        acquire: async (request, values): Promise<IResolutionOutcome> => {
+          const requestKey = requestKeyOf(request.requestKey);
+          const context = newRequest('normal', requestKey, request.lease);
+          leaseOf(context);
+          const cursor = values[1];
+          if (values.length !== 2 || (cursor !== undefined && typeof cursor !== 'string')) {
+            throw new ResolutionError('invalid-request', 'Root acquisition requires its current query and predecessor cursor');
+          }
+          // The controller has checked the current query/predecessor and run
+          // before this boundary. Definition records that owner fact unchanged.
+          const recipes = options.declarations.rootArgumentRecipes(composition, witness, [values[0], cursor], true);
+          const target = composition.resolve(binding.page);
+          if (target.status !== 'bound' || target.target.role !== 'callable' || target.target.kind !== 'supplied-source') {
+            throw new ResolutionError('invalid-request', 'The root witness no longer names its supplied source');
+          }
+          const arguments_: readonly IArgumentValue[] = derivedArguments(recipes).map(value => ({ kind: 'data', value }));
+          const call: ISuppliedSourceCall<IFamily> = {
+            slot: binding.page, declaration: target.target.declaration,
+            subject: target.target.subjectFor(recipes), values: arguments_, digest: argumentDigest(arguments_),
+          };
+          const resolved = await resolveSourceShared(context, call.slot, call.declaration, call);
+          return normalOutcome({ ...resolved, gate: undefined });
+        },
+        read: reference => integrity(() => history.reader.readSubtree(reference, [])),
+      });
+      rootAcquisitions.set(binding.slot, root);
+      return root;
+    },
+    dispose(): void {
+      traversalsDisposed = true;
+      for (const root of rootAcquisitions.values()) { root.dispose(); }
+    },
+  });
+
   return Object.freeze({
+    ...(traversalPort === undefined ? {} : { traversals: traversalPort }),
     async resolve(request: IResolveRequest): Promise<IResolutionOutcome> {
       const requestKey = requestKeyOf(request.requestKey);
       const context = newRequest('normal', requestKey, request.lease);
@@ -3671,7 +3762,9 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
      */
     async resolveFold(request: IFoldRequest): Promise<IFoldResolution> {
       const requestKey = requestKeyOf(request.requestKey);
-      const context = newRequest('normal', requestKey, request.lease);
+      const captured = request.sourceEvidence === undefined ? undefined
+        : readRequestSourceEvidence(request.sourceEvidence, composition, request.normalRequestKey ?? requestKey, request.step);
+      const context = newRequest('normal', requestKey, request.lease, captured);
       leaseOf(context);
       const target = anyStepTarget(request.step);
       const declaration = target.declaration;
@@ -3709,6 +3802,9 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
      * executed, with complete coverage.
      */
     async resolveOutcomeFold(request: IFoldRequest): Promise<IOutcomeFoldResolution> {
+      if (request.sourceEvidence !== undefined) {
+        throw new ResolutionError('invalid-request', 'Captured traversal evidence belongs only to its declared strict fold');
+      }
       const requestKey = requestKeyOf(request.requestKey);
       const context = newRequest('normal', requestKey, request.lease);
       leaseOf(context);

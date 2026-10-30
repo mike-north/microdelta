@@ -58,6 +58,8 @@ export interface IDeclarationBrand<TFamily extends IBindingFamily> {
  */
 export type ISourceRunContext<TFamily extends IBindingFamily, TResult> = TFamily['source'] & {
   readonly previous: IApply<TFamily['previous'], TResult> | undefined;
+  /** Current request evidence, only when Resolution supplies this declared collection's capture. */
+  readonly evidence?: IApply<TFamily['views'], TResult>;
 };
 
 /**
@@ -67,6 +69,8 @@ export type ISourceRunContext<TFamily extends IBindingFamily, TResult> = TFamily
  */
 export type IFinalityContext<TFamily extends IBindingFamily, TResult> = TFamily['source'] & {
   readonly previous: IApply<TFamily['previous'], TResult>;
+  /** The same request capture used to interpret current source evidence, when one is bound. */
+  readonly evidence?: IApply<TFamily['views'], TResult>;
 };
 
 /**
@@ -281,6 +285,16 @@ export interface IPreviousSupplier<TFamily extends IBindingFamily> {
 }
 
 /**
+ * Resolution's tracked view of one declared source's captured current evidence.
+ * The declaration's result type fixes the view type; this supplier selects
+ * neither a different relationship nor an arbitrary author-provided value.
+ * @alpha
+ */
+export interface ISourceEvidenceSupplier<TFamily extends IBindingFamily> {
+  view<TResult>(declaration: ISourceDeclaration<TFamily, TResult, never>): IApply<TFamily['views'], TResult>;
+}
+
+/**
  * The member binding one invocation is applied with: Resolution's member
  * supplier and the instance descriptor it is asked about.
  */
@@ -311,9 +325,9 @@ export interface ISourceRecord<TFamily extends IBindingFamily> {
   readonly kind: 'source';
   readonly declaration: IAnySourceDeclaration<TFamily>;
   /** Pair the actual `run` with its assembled context (and its member binding, for an instance) and hand both to the invoker. */
-  apply<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily> | undefined, invoke: IAuthorInvoker<TOutcome>, member: IMemberAccess<TFamily> | undefined): TOutcome;
+  apply<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily> | undefined, invoke: IAuthorInvoker<TOutcome>, member: IMemberAccess<TFamily> | undefined, evidence?: ISourceEvidenceSupplier<TFamily>): TOutcome;
   /** Pair the actual `finality` with its assembled context; absent hooks reject. */
-  applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>, member: IMemberAccess<TFamily> | undefined): TOutcome;
+  applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>, member: IMemberAccess<TFamily> | undefined, evidence?: ISourceEvidenceSupplier<TFamily>): TOutcome;
   /** Dispatch a call of this source as a declared child, typed by its result. */
   dispatch(port: IInvocationPort<TFamily>, scope: IInvocationScope, witness: IInvocationWitness): Promise<IChildResult<unknown>>;
   /** Mint and record a template instance: a declaration with a new complete subject and the same callbacks. */
@@ -426,21 +440,29 @@ export function declareSourceWith<TFamily extends IBindingFamily, TResult, TExtr
   const recordOf = (current: ISourceDeclaration<TFamily, TResult, TExtra>): ISourceRecord<TFamily> => ({
     kind: 'source',
     declaration: current,
-    apply<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily> | undefined, invoke: IAuthorInvoker<TOutcome>, member: IMemberAccess<TFamily> | undefined): TOutcome {
+    apply<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily> | undefined, invoke: IAuthorInvoker<TOutcome>, member: IMemberAccess<TFamily> | undefined, evidence?: ISourceEvidenceSupplier<TFamily>): TOutcome {
       checkBindings(bindings, 'previous');
+      checkBindings(bindings, 'evidence');
       const extra = extend(bindings, member);
       const carrier = previous === undefined ? undefined : checkCarrier(previous.carrier(current));
-      const context: ISourceRunContext<TFamily, TResult> & TExtra = { ...bindings, ...extra, previous: carrier };
+      const context: ISourceRunContext<TFamily, TResult> & TExtra = {
+        ...bindings, ...extra, previous: carrier,
+        ...(evidence === undefined ? {} : { evidence: evidence.view(current) }),
+      };
       Object.freeze(context);
       return invoke(run, context);
     },
-    applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>, member: IMemberAccess<TFamily> | undefined): TOutcome {
+    applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>, member: IMemberAccess<TFamily> | undefined, evidence?: ISourceEvidenceSupplier<TFamily>): TOutcome {
       if (finality === undefined) {
         reject('invalid-callback', `Source ${current.subject} declares no finality hook.`);
       }
       checkBindings(bindings, 'previous');
+      checkBindings(bindings, 'evidence');
       const extra = extend(bindings, member);
-      const context: IFinalityContext<TFamily, TResult> & TExtra = { ...bindings, ...extra, previous: checkCarrier(previous.carrier(current)) };
+      const context: IFinalityContext<TFamily, TResult> & TExtra = {
+        ...bindings, ...extra, previous: checkCarrier(previous.carrier(current)),
+        ...(evidence === undefined ? {} : { evidence: evidence.view(current) }),
+      };
       Object.freeze(context);
       return invoke(finality, context);
     },
@@ -727,7 +749,7 @@ function checkChildRecord(read: IReadOptions): void {
  * callback context, and must not claim the context name Definition supplies.
  * Field values are never read.
  */
-export function checkBindings(bindings: object, reserved: 'previous' | 'calls' | 'args' | 'member' | 'members'): void {
+export function checkBindings(bindings: object, reserved: 'previous' | 'calls' | 'args' | 'member' | 'members' | 'evidence'): void {
   if (!isPlainRecord(bindings)) {
     reject('invalid-bindings', 'Bindings must be a plain record of enumerable own data fields.');
   }

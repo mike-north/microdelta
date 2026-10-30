@@ -133,7 +133,10 @@ The [preview-observation plan](../plans/preview-observation.md) records accepted
 independent observation lifetime, current/stale preview meaning and consumer-owned
 cache policy. RUN-007/008 own requirements; the plan identifies remaining API,
 retention, disposal and aggregate choices and bounded readiness recommendations.
-This is not a claim of delivered behavior or whole-issue implementation readiness.
+The companion [proposed observation protocol](../plans/preview-observation-protocol.md)
+offers a concrete engineering decomposition; its new mechanism choices remain
+proposed and unselected. Neither document claims delivered behavior or
+whole-issue implementation readiness.
 
 ## Proposed issue plans
 

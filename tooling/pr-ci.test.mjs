@@ -208,6 +208,13 @@ test('the CLI rejects an invalid shard before source discovery or test dispatch'
   }
 });
 
+test('newer PR checks cancel only runs for the same workflow and pull request', async () => {
+  const workflow = await readFile(path.join(root, '.github/workflows/pr-check.yml'), 'utf8');
+  // Workflow and PR identity stay stable across pushes but differ across unrelated
+  // checks; commit/run identity would prevent replacement of obsolete work.
+  assert.match(workflow, /^concurrency:\n  group: \$\{\{ github.workflow \}\}-\$\{\{ github.event.pull_request.number \}\}\n  cancel-in-progress: true$/mu);
+});
+
 test('the aggregate rejects an omitted successful-preparation record', () => {
   assert.throws(() => validateAggregate(plan, identity, 'success', Array(4).fill('success'), receipts, undefined), /preparation/u);
 });
@@ -531,7 +538,7 @@ test('the actual protected aggregate workflow resolves the artifact-producing te
 test('measured tooling files have the selected whole-file owners while every ordinary file stays covered once', async () => {
   const { planRepository, sourceFiles } = await import('./pr-ci.mjs');
   const plan = await planRepository(root);
-  const expected = new Map([['tooling/quality-gates.test.mjs', 3], ['tooling/release-artifacts.test.mjs', 2], ['tooling/declaration-boundaries.test.mjs', 1]]);
+  const expected = new Map([['tooling/quality-gates.test.mjs', 1], ['tooling/release-artifacts.test.mjs', 2], ['tooling/declaration-boundaries.test.mjs', 3], ['tooling/pr-ci.test.mjs', 4]]);
   for (const [file, shard] of expected) {
     const owner = plan.obligations.find(item => item.files?.includes(file));
     assert.ok(owner, file);
@@ -542,7 +549,10 @@ test('measured tooling files have the selected whole-file owners while every ord
   assert.equal(commands.length, 4);
   assert.deepEqual(commands.flatMap(item => item.files).sort(), discovered);
   assert.equal(new Set(commands.flatMap(item => item.files)).size, discovered.length);
-  for (const command of commands) assert.deepEqual(command.args, ['--test', '--test-concurrency=1', ...command.files]);
+  for (const command of commands) {
+    assert.ok(command.files.length > 0, 'a tooling command must not invoke implicit Node test discovery');
+    assert.deepEqual(command.args, ['--test', '--test-concurrency=1', ...command.files]);
+  }
 });
 
 /** Independent malformed inventories exercise each fail-closed ownership boundary. */

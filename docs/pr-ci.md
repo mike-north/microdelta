@@ -6,6 +6,9 @@ workspace static check, and the additional test compilers. Four fresh runner
 jobs each install the lockfile with `npm ci`, restore their generated outputs,
 and execute their assigned tests serially, including Node test-file dispatch. No installed dependencies or mutable
 working directory crosses runners. This workflow uses read-only contents access.
+New runs cancel older PR Check runs for the same pull request, using workflow and
+PR identity rather than commit identity. Other pull requests and the main Check
+workflow have separate execution lifetimes.
 
 The required **core (24)** PR check is the aggregate of preparation and all four
 shards. Its job runs even when dependencies fail or are cancelled or skipped.
@@ -48,10 +51,11 @@ Core Jest files are divided across all four shards. Other ordinary Jest files
 use the same stable file-count partition. This does not claim equal durations;
 preparation and shard receipts record elapsed milliseconds for adjustment from
 observed evidence. Tooling keeps one execution owner with four serial whole-file
-commands: `quality-gates.test.mjs` belongs to shard 3,
-`release-artifacts.test.mjs` to shard 2, and `declaration-boundaries.test.mjs` to
-shard 1; all remaining discovered tooling files belong to shard 4. These routes
-spread the measured compiler and package-fixture cost. Discovery and command
+commands: `quality-gates.test.mjs` belongs to shard 1,
+`release-artifacts.test.mjs` to shard 2, and `declaration-boundaries.test.mjs` to shard 3;
+all remaining discovered tooling files belong to shard 4. These routes spread
+the measured compiler and package-fixture cost while keeping each tooling command
+nonempty, so no command invokes implicit Node test discovery. Discovery and command
 ownership must cover every tooling file exactly once; a missing named route,
 duplicate, unowned new file or differing command fails before execution. The
 ordinary local tooling command is unchanged. The existing whole

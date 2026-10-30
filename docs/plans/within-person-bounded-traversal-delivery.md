@@ -45,8 +45,15 @@ route. Current CLI obligations remain in the reviewed inventory.
 `fixtures/within-person-slice/` contains one fixed application, worker and Jest
 oracle using generated package imports. Ordinary build/check compile and lint
 these sources; `qualify:within-person-slice` is excluded from ordinary execution.
-The first invocation requires separate supervisory release after actual source,
-emission and invocation review. No new two-worker execution is claimed here.
+The first invocation received separate supervisory release after actual source,
+emission and invocation review and passed on
+`a52ed40c0e0085517738f4ec722de2ba203bbd09`. The
+[2026-10-30 evidence record](../validation/bounded-traversal-2026-10-30.md)
+records the exact command, causal acknowledgments, references, limits and hashes.
+Independent receipt review returned PASS and root accepted the bounded local
+behavior. PR/main acceptance is tracked separately in
+[#316](https://github.com/mike-north/microdelta/pull/316);
+this result authorizes no additional invocation.
 
 The failure worker holds page two inside its actual send, waits for A's actual
 publication, then releases a definite permanent failure. The parent requires
@@ -90,18 +97,20 @@ synchronous parent History opening/query/release; the Jest timer and later time
 assertions cannot preempt native work. Do not use `--foreground`, npm, npx, a
 version-manager shim or a build inside the bounded invocation. The concrete
 reviewed host has GNU gtimeout 9.11 and Node 24.14.0. After ordinary build and
-source/emission review, the proposed one-time command from the repository root is:
+source/emission review, root released and executed this one-time command from
+the repository root at source `a52ed40c0e0085517738f4ec722de2ba203bbd09`:
 
 ```sh
 MICRODELTA_SLICE_EVIDENCE=/private/tmp/microdelta-315-facade-proof-1 exec /opt/homebrew/bin/gtimeout --signal=KILL 40s /Users/mnorth/.nodenv/versions/24.14.0/bin/node --experimental-vm-modules node_modules/jest/bin/jest.js --config fixtures/within-person-slice/jest.config.mjs --runInBand
 ```
 
-The evidence directory must not exist. The opt-in npm alias names the same Jest
-route for inventory purposes; it is not authority to omit the mandatory external
-cutoff. Actual execution still needs explicit supervisory release. Independent
-adversarial review, the finite proof, protected Copilot/supervisory/CI gates and
-exact-main build/check/test verification remain acceptance obligations before
-delivery/issue closure.
+The release required a fresh evidence directory; it now contains retained proof
+evidence and must not be reused. The opt-in npm alias names the same Jest route
+for inventory purposes; it is not authority to omit the mandatory external
+cutoff. No rerun is needed or authorized. Protected Copilot/supervisory/CI gates
+and exact-main build/check/test verification remain acceptance obligations before
+delivery/issue closure, tracked separately in
+[#316](https://github.com/mike-north/microdelta/pull/316).
 
 ## Validation evidence boundary
 
@@ -110,7 +119,11 @@ passed on the extracted slice. New owner-port assertions then demonstrated six
 behavioral failures: malformed original keys opened acquisition, and an accessor
 key was read twice. The repair captures and validates one nonempty string before
 owned work/port opening; all 15 traversal entry/lifetime cases pass. Fixture
-compilation, type-aware lint and generated-package import boundaries pass without
-running the new two-worker proof. Final normal gates and independent affected
-review are recorded with the implementation handoff; none substitutes for the
-separately released facade proof or exact-main integration.
+compilation, type-aware lint and generated-package import boundaries passed,
+and final ordinary `npm run check`, `npm test` and `npm run build` passed on
+`a52ed40c0e0085517738f4ec722de2ba203bbd09` before the separately released
+proof. Independent runtime/extraction/generation and fixture source reviews were
+accepted. The first proof passed with 5+9 sends, actual post-close exact readback
+and fresh-process exact A reuse; its [evidence record](../validation/bounded-traversal-2026-10-30.md)
+preserves the bounded outcome. PR/main acceptance is tracked separately in
+[#316](https://github.com/mike-north/microdelta/pull/316).

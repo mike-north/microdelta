@@ -5,8 +5,6 @@ process restarts. You choose which steps to memoize. The runtime retains their
 results and records the inputs and called implementations they consumed, so later
 runs can validate that evidence before deciding what to reuse.
 
-The current checkout and package versions built from it require Node.js 24 or later.
-
 Consider a report that assesses hundreds of pull requests. An assessment reads a
 pull request's title and diff, but ignores its labels. A labels-only edit should
 not require another assessment. A changed title or assessor should. If an
@@ -15,38 +13,12 @@ that score can still keep its earlier result. The goal is to avoid repeating wor
 whose relevant evidence remains acceptable, including work that is costly or
 nondeterministic.
 
-**Experimental:** a bounded durable runtime, keyed composition, and operational
-controls are implemented in this repository. The authoring API remains
-**project-private alpha**, with breaking changes expected. The default public
-TypeScript entry exposes the compatibility History Store API, not the durable
-analysis API used below. Start with the checkout example to evaluate the runtime;
-this is not a supported external installation guide.
-
-## Try a durable analysis
+## See it work
 
 The checked-in [contribution report](examples/contribution-report/README.md)
-analyses a fixture repository, scores its pull requests, and combines contributors'
-summaries into a report. It uses local fixture data and deterministic TypeScript
-assessors: no GitHub credentials, network provider, or paid calls are required to
-run it.
-
-Use **Node.js 24** and npm from a checkout of this repository. Installation needs
-network access for dependencies. The SQLite adapter uses the native
-`better-sqlite3` dependency; if a matching prebuilt binary is unavailable, a working
-native build toolchain is required. Do not assume every newer Node version is
-supported by that dependency.
-
-For a pnpm external ESM consumer of the published `microdelta@0.2.0`, read
-the [targeted native-build approval guide](docs/native-sqlite-install.md)
-before opening the project-private durable workspace. The public memory Store
-does not need that native binding.
-
-From the repository root, choose a store directory that does not already contain
-a previous example run:
-
-Before choosing a durable store location, review the [native store location
-guidance](docs/native-store-locations.md) for supported path spellings and the
-SQLite hard-link/WAL limitation.
+scores the pull requests in a fixture repository and combines each contributor's
+summary into a report. It needs no credentials, network provider or paid calls.
+With Node.js 24, from a checkout:
 
 ```sh
 npm ci
@@ -56,132 +28,61 @@ node examples/contribution-report/dist/main.js run --store .test-build/readme-de
 node examples/contribution-report/dist/main.js run --store .test-build/readme-demo --rubric C --json
 ```
 
-Each `node` command starts a fresh process and opens the same SQLite-backed store.
-These commands belong to the **example's CLI**. The installed `microdelta`
-executable also provides the accepted bounded foreground run-start and separately
-permissionable finite exact-execution observation. The current checkout's locally
-built command has controlled installed-command evidence; that evidence does not
-publish a new package version or expose the project-private alpha declarations.
-The command contract and receipt meanings are described in [private alpha
-workspace consumers](docs/private-alpha-workspace-consumers.md) and
-[CLI-005](docs/spec/operations.md#cli-005--bounded-exact-execution-observation).
-This run-start path does not serialize the application's report: caller code owns
-report presentation and can use `run.read(reference)` during the active run to
-read the exact immutable result. The broader inspection checkpoint remains open.
+Each command is a fresh process opening the same SQLite store. The JSON reports
+each step's outcome, its exact result reference and how many step bodies ran.
+These commands belong to the example. The installed `microdelta` executable can
+also start a run in the foreground and observe a finite exact execution; the
+[workspace consumer guide](docs/private-alpha-workspace-consumers.md) describes
+those commands and their receipts.
 
-The JSON includes the report, each member's outcome and exact result reference,
-body execution counts (`executions`), and source-policy checks (`finality`). The
-three commands show different behavior:
-
-| Run | What executes | What the report shows |
+| Run | What executes | What changes |
 | --- | --- | --- |
-| First run | Discovery, three activity sources, six assessments, three summaries, and the report | Ada scores 5, Ben 3, Cy 2; all three contributors are covered |
-| Unchanged restart | Source-policy checks; no step bodies (`executions` is `{}`) | The summaries and report have `kind: "reused"` and retain their exact references |
-| Changed assessor (`--rubric C`) | All six assessments, Ben's summary, and the report | Ben's score becomes 4; Ada's and Cy's summaries retain their exact references |
+| First run | Discovery, three activity sources, six assessments, three summaries, the report | Ada scores 5, Ben 3, Cy 2 |
+| Unchanged restart | Source-policy checks only; no step bodies | Every result is reused with its earlier reference |
+| Changed assessor (`--rubric C`) | All six assessments, Ben's summary, the report | Ben becomes 4; Ada's and Cy's summaries keep their references |
 
-The final run changes how a merged bug fix is scored. Ada's and Cy's assessments
-also run again, but their scores stay equal. Their summaries consume scores rather
-than assessment explanation text, so those summaries can be retained. This is
-reuse across a complete process exit and a cutoff at unchanged consumed output,
-not merely an identical printed report.
-
-This three-contributor checkout example is the M3 walkthrough. It is separate
-from the accepted two-person controlled proof of the installed `start` and
-finite `observe` commands, recorded in [#294](https://github.com/mike-north/microdelta/issues/294#issuecomment-6462080386).
-That proof is checkout/local-build evidence; its private fixture outcome files
-are not a supported report export format or evidence of package publication.
-
-See the [example guide](examples/contribution-report/README.md) for its source,
-composition choices, recovery commands, cancellation, and spend-free operational
-scenarios. Its [existing tests](examples/contribution-report/test/example.test.mjs)
-check output, invocation counts, and exact references in separate processes.
+In the last run every assessment executes, but Ada's and Cy's scores come out
+equal. Their summaries consumed only scores, so the runtime cuts off there and
+retains them. That is reuse across a complete process exit, decided by what each
+step actually read.
 
 ## How reuse works
 
-An author declares sources, memoized steps, and their composition. **Sources have
-an explicit acceptance policy**: a stored snapshot does not become current merely
-because it exists. In this example the policy checks a fixture revision; a real
-adapter must decide how to validate its own source.
+An author declares **sources**, **memoized steps** and their composition.
+Sources carry an explicit acceptance policy: a stored snapshot is current only
+when its policy says so. Tracked reads record the facts a step consumes, so
+reading one field does not make the whole record a dependency. Called
+implementations are recorded too, so a changed assessor invalidates what it
+produced.
 
-Tracked reads record the supported facts a step consumes. Reading a name does not
-implicitly consume every other field of its containing record. Called
-implementation evidence matters too. Tracking and memoization are separate:
-authoring a tracked helper does not automatically retain its result.
+On a later run the runtime checks that evidence against current bindings and
+source policy. Accepted reuse keeps an exact reference to the earlier result.
+When a child produces new output, downstream work stays reusable if the facts it
+consumed are unchanged.
 
-On a later run, the runtime checks the recorded evidence against current bindings
-and source policy. Accepted reuse keeps an **exact reference** to the earlier
-result. Current acceptance is separate from that result's original provenance.
-When a child produces new output, downstream work can remain reusable if the facts
-it consumed are unchanged.
-
-Authors remain responsible for declaring and tracking relevant external
-influences. Arbitrary mutable closure state, hidden I/O, and every possible
-JavaScript operation are not automatically made safe by function-source tracking.
-The [facade guide](packages/core/README.md) describes the alpha authoring surface;
+The [facade guide](packages/core/README.md) describes the authoring surface, and
 the [tracking](docs/spec/tracking.md) and [execution](docs/spec/execution.md)
-contracts explain the model and its boundaries.
+contracts define the model.
 
-## Current scope and limitations
+## Status
 
-The repository's accepted runtime includes durable results and references, keyed
-fanout and folds, fenced writer coordination, retry and cancellation controls,
-environment isolation, and known-versus-unknown resource accounting. The accepted
-[acquisition retry/rate target](docs/plans/data-acquisition-retries.md) changes the
-legacy M5 replay policy and still needs runtime implementation; this documentation
-change alone delivers no new retry behavior. The implemented runtime's historical evidence
-is bounded to one fenced writer per store on single-host SQLite, including process
-kill/restart tests; it does not establish distributed or power-loss guarantees,
-lease-wait fairness, or production readiness.
-
-[Nullable-container guards](https://github.com/mike-north/microdelta/issues/155)
-retain bounded kind evidence across restarts. Upgrading invalidates earlier
-computation evidence and may recompute prior work; exact historical results and
-operation journals remain readable. See the
-[tracking evidence compatibility boundary](docs/spec/execution.md#reuse-001--reuse-is-a-current-contextual-decision).
-Do not treat the example or accepted checkpoints as a guarantee that arbitrary
-analyses are safe. The bounded run-start and exact-observation slice has delivery
-evidence, while full CLI-001–004 inspection, M6, full workflow/scale acceptance
-under M7, and real-provider acceptance remain open.
-
-Supported structured data is deliberately constrained. Plain records and arrays
-are the current result-root shapes; unsupported values such as cyclic/shared
-references, accessors, `Date`, `Map`, `Set`, and class instances are rejected. See
-[supported values](docs/spec/tracking.md#structured-addresses-and-fingerprints)
-and the [implementation map](docs/package-map.md) for precise boundaries.
-
-Published packages and the checkout's private-alpha API are different surfaces.
-The [first-release record](docs/validation/first-release-2026-09-28.md) documents the
-historical `0.1.0` publication; it does not make the current alpha authoring API a
-supported public contract. Resource Accounting remains a private workspace
-package supplied through an injected port.
+microdelta is experimental. The authoring API is project-private alpha and the
+durability evidence is bounded to a single fenced writer on local SQLite.
+[Status and limits](docs/status.md) lists every current boundary in one place,
+including the native SQLite dependency. If `npm ci` has no prebuilt
+`better-sqlite3` for your platform, see the
+[native toolchain guide](docs/native-sqlite-toolchain.md) or, for pnpm
+consumers, the [native install guide](docs/native-sqlite-install.md).
 
 ## Explore and contribute
 
-- [Example and walkthrough](examples/contribution-report/README.md): run, change,
-  recover, and inspect the fixture analysis.
-- [Facade API guide](packages/core/README.md): public compatibility Store versus
-  private-alpha authoring and operations.
-- [Native SQLite toolchain guide](docs/native-sqlite-toolchain.md): qualified
-  installation evidence and a disposable host diagnostic for the durable path.
-- [Implementation map](docs/package-map.md): package responsibilities and delivered
-  capabilities.
-- [Specification](docs/spec/README.md) and [glossary](docs/spec/glossary.md): active
-  design authority and shared terms.
-- [Delivery milestones](docs/milestones.md) and
-  [issue queue](https://github.com/mike-north/microdelta/issues): accepted evidence
-  and remaining work.
+- [Example walkthrough](examples/contribution-report/README.md): run, change,
+  recover and inspect the fixture analysis.
+- [Implementation map](docs/package-map.md): what each package does today.
+- [Specification](docs/spec/README.md) and [glossary](docs/spec/glossary.md).
+- [Milestones](docs/milestones.md) and the
+  [issue queue](https://github.com/mike-north/microdelta/issues).
 
-After installing dependencies, contributors run:
-
-```sh
-npm run check
-npm test
-npm run build
-```
-
-Runtime tests use Jest and type contracts use tsd. Checks enforce strict
-TypeScript, type-aware lint, package/declaration boundaries, and API reports.
-Follow [delivery conventions](ENG_TEAM_INSTRUCTIONS.md): use a scoped issue and
-isolated worktree, derive tests from intended behavior before changing software,
-and open a PR for supervisory review. Package publication remains a separate,
+Contributors run `npm run check`, `npm test` and `npm run build`, and follow the
+[delivery conventions](ENG_TEAM_INSTRUCTIONS.md). Publication is a separate,
 human-controlled decision under the [release process](docs/releasing.md).

@@ -196,7 +196,9 @@ if (witness.version === 2) {
 }
 declare const resolution: IWitnessResolution<IFamily>;
 if (resolution.status === 'bound' && resolution.child.role === 'callable') {
-  expectType<'supplied-step'>(resolution.child.kind);
+  expectType<'supplied-step' | 'supplied-source'>(resolution.child.kind);
+  if (resolution.child.kind === 'supplied-step') { expectType<'supplied-step'>(resolution.child.declaration.kind); }
+  else { expectType<'supplied-source'>(resolution.child.declaration.kind); }
 }
 
 // The argument supplier is generic in the supplied declaration's parameters.

@@ -16,6 +16,7 @@
  * @see ../../../../docs/plans/m4-composition.md ("Strict fold"; strict-fold-readiness, strict-fold-coverage, closed-empty-population)
  * @see ../../../../experiments/exp-4/decision.md (supervisor resolution)
  */
+import { inspectProvenanceObservations } from '../provenance-wire-inspection.js';
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
 
 import { ResolutionError, openWorkspace } from '../../src/index.js';
@@ -282,7 +283,7 @@ interface IStoredFold {
   readonly kind: string;
   readonly over?: unknown;
   readonly membership: readonly { readonly key: string; readonly status: string; readonly reference?: { readonly locator: string } }[];
-  readonly observations: readonly { readonly binding: { readonly path: readonly string[] }; readonly address: readonly { readonly key?: string }[] }[];
+  readonly observations: readonly (readonly unknown[])[];
 }
 
 describe('fold evidence and verification (acceptance 4)', () => {
@@ -290,8 +291,9 @@ describe('fold evidence and verification (acceptance 4)', () => {
     const location = freshLocation();
     const report = await runFold(location, { minimumAuthored: 2 });
     const stored = readProvenanceRecord(location, foldReference(report));
-    expect(stored.formatVersion).toBe(3);
-    // Resolution's version-3 provenance stores a fold's record as plain data of this shape.
+    expect(stored.formatVersion).toBe(5);
+    expect(stored.content).toHaveProperty('semanticVersion', 3);
+    // Fold semantic variant 3 keeps membership plain while observations use wire-5 tuples.
     const content = stored.content as IStoredFold;
     expect(content.kind).toBe('fold');
     // The consumed template step: its structural address, never a member key.
@@ -301,10 +303,10 @@ describe('fold evidence and verification (acceptance 4)', () => {
       { key: 'person:ben', status: 'included', reference: { kind: 'completed-result', locator: memberReference(report, 'person:ben') } },
       { key: 'person:cy', status: 'skipped' },
     ]);
-    const bindings = [...new Set(content.observations.map((item) => JSON.stringify(item.binding.path)))].sort();
+    const bindings = [...new Set(inspectProvenanceObservations(content).map((item) => JSON.stringify(item.binding.path)))].sort();
     expect(bindings).toEqual(['["callable","render"]', '["entry","person:ada"]', '["entry","person:ben"]', '["self"]']);
     // The fold consumed each included member's score and nothing else of it.
-    const consumed = content.observations.filter((item) => item.binding.path[0] === 'entry').map((item) => item.address.map((segment) => segment.key));
+    const consumed = inspectProvenanceObservations(content).filter((item) => item.binding.path[0] === 'entry').map((item) => item.address.map((segment) => segment.key));
     expect(consumed).toEqual([['score'], ['score']]);
   });
 
@@ -421,7 +423,7 @@ describe('fold evidence and verification (acceptance 4)', () => {
 
 /** A deep, mutable JSON copy of stored fold provenance content. */
 function foldContent(record: IStoredRecord): IStoredFold & Record<string, unknown> {
-  // Resolution's version-3 provenance stores a fold's record as plain data of this shape.
+  // Fold semantic variant 3 keeps membership plain while observations use wire-5 tuples.
   return JSON.parse(JSON.stringify(record.content)) as IStoredFold & Record<string, unknown>;
 }
 
@@ -432,7 +434,7 @@ describe('stored fold evidence', () => {
     const original = readProvenanceRecord(location, foldReference(cold));
     const unknownVersion = publishCrafted(location, foldReference(cold), { ...original, formatVersion: 9 });
     const content = foldContent(original);
-    const sourceKind = publishCrafted(location, foldReference(cold), { format: original.format, formatVersion: 1, content: { kind: 'source', step: content['step'], observations: content.observations, children: [] } });
+    const sourceKind = publishCrafted(location, foldReference(cold), { format: original.format, formatVersion: 5, content: { trackingSemantics: 2, semanticVersion: 1, kind: 'source', step: content['step'], observations: content.observations, children: [] } });
     clearLog();
     const report = await runFold(location, { order: 'reversed' });
     expect(report.fold).toMatchObject({ status: 'succeeded', kind: 'reused', reference: foldReference(cold), misses: ['unsupported-evidence', 'unsupported-evidence'] });
@@ -444,7 +446,7 @@ describe('stored fold evidence', () => {
     ['membership keys out of canonical order', (content: IStoredFold & Record<string, unknown>) => ({ ...content, membership: [...content.membership].reverse() }), undefined],
     ['a consumed member fact of a skipped member', (content: IStoredFold & Record<string, unknown>) => ({
       ...content,
-      observations: content.observations.map((item) => item.binding.path[1] === 'person:ada' ? { ...item, binding: { path: ['entry', 'person:cy'] } } : item),
+      observations: inspectProvenanceObservations(content).map((item) => item.binding.path[1] === 'person:ada' ? [['entry', 'person:cy'], ...item.tuple.slice(1)] : item.tuple),
     }), undefined],
     ['an included member result outside the exact dependencies', (content: IStoredFold & Record<string, unknown>) => content, [] as readonly string[]],
     ['no consumed template step', (content: IStoredFold & Record<string, unknown>) => Object.fromEntries(Object.entries(content).filter(([key]) => key !== 'over')), undefined],
@@ -453,7 +455,7 @@ describe('stored fold evidence', () => {
       ...content,
       over: { scope: analysis, role: 'step', slot: 'summary', template: 'contributor', collection: 'contributors', memberKey: 'person:ada' },
     }), undefined],
-  ] as const)('malformed version-3 fold evidence is integrity damage, never a miss: %s', async (_name, tamper, dependencies) => {
+  ] as const)('malformed semantic-3 fold evidence is integrity damage, never a miss: %s', async (_name, tamper, dependencies) => {
     const location = freshLocation();
     const cold = await runFold(location, { minimumAuthored: 2 });
     const original = readProvenanceRecord(location, foldReference(cold));

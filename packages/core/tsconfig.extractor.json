@@ -6,6 +6,7 @@
       "@microdelta/definition": ["../../node_modules/@microdelta/definition/dist/api/definition.alpha.d.ts"],
       "@microdelta/history": ["../../node_modules/@microdelta/history/dist/api/history.alpha.d.ts"],
       "@microdelta/history/conformance/store": ["../../node_modules/@microdelta/history/dist/api/history.conformance.store.alpha.d.ts"],
+      "@microdelta/machine": ["../../node_modules/@microdelta/machine/dist/api/machine.alpha.d.ts"],
       "@microdelta/machine-node": ["../../node_modules/@microdelta/machine-node/dist/api/machine-node.alpha.d.ts"],
       "@microdelta/materialization": ["../../node_modules/@microdelta/materialization/dist/api/materialization.alpha.d.ts"],
       "@microdelta/resolution": ["../../node_modules/@microdelta/resolution/dist/api/resolution.alpha.d.ts"],

@@ -1,0 +1,6 @@
+{
+  "extends": "../../examples/contribution-report/tsconfig.json",
+  "include": ["../../examples/contribution-report/src/**/*.ts", "./**/*.ts"],
+  "exclude": ["test-d", ".test-build"],
+  "compilerOptions": { "rootDir": "../..", "outDir": ".test-build", "declaration": true }
+}

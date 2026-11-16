@@ -15,7 +15,9 @@
  * jobs", while a newer Version Packages PR merges. The publisher therefore
  * re-reads GitHub (read-only job token) and requires this commit to still be
  * the latest merged Version Packages PR, both before the registry plan and
- * before every individual publish. Missing or unreadable evidence refuses.
+ * before every individual publish. It also requires fresh successful main
+ * integration of this exact commit at each boundary; a queued or failed rerun
+ * cannot reuse the earlier packaging gate. Missing or unreadable evidence refuses.
  *
  * It then reads the registry for every package. A version already published
  * with identical contents is skipped (resuming a partial run); a version
@@ -31,6 +33,7 @@ import { appendFile, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { currentReleaseDecision } from './release-decision.mjs';
+import { assertMainIntegration } from './release-integration.mjs';
 import { bootstrapVersion, registeredPackages, trustedPublisher } from './release-graph.mjs';
 
 /** npm's documented minimum for trusted publishing. */
@@ -181,7 +184,8 @@ async function summary(line) {
 
 /**
  * Re-establish from live GitHub state that this run's commit is still the
- * latest release decision. `published` names what this run already published,
+ * latest release decision and has current successful exact-commit main integration.
+ * `published` names what this run already published,
  * so a refusal part way through is reported precisely.
  */
 async function requireStillEligible(published) {
@@ -189,6 +193,7 @@ async function requireStillEligible(published) {
   try {
     decision = await currentReleaseDecision(process.env);
     if (!decision.publish) throw new PublishError(`this run is not eligible for publication: ${decision.reason}`);
+    await assertMainIntegration(process.env);
   } catch (error) {
     throw new PublishError([
       `Release eligibility refused: ${error.message}`,

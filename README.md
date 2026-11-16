@@ -30,6 +30,10 @@ node examples/contribution-report/dist/main.js run --store .test-build/readme-de
 
 Each command is a fresh process opening the same SQLite store. The JSON reports
 each step's outcome, its exact result reference and how many step bodies ran.
+These commands belong to the example. The installed `microdelta` executable can
+also start a run in the foreground and observe a finite exact execution; the
+[workspace consumer guide](docs/private-alpha-workspace-consumers.md) describes
+those commands and their receipts.
 
 | Run | What executes | What changes |
 | --- | --- | --- |

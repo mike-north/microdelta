@@ -21,9 +21,10 @@
 import { writeSync } from 'node:fs';
 
 import type { ISqliteCapability } from '@microdelta/history';
-import { canonicalNodeLocation, createNodeClock, createNodeMachine, createNodeRandom, createNodeSqlite as createRealNodeSqlite, createNodeTimer } from '@microdelta/machine-node';
+import { canonicalNodeLocation, createNodeClock, createNodeElapsedClock, createNodeMachine, createNodeRandom, createNodeSqlite as createRealNodeSqlite, createNodeSqliteCoordinatedReader, createNodeSqliteReader, createNodeTimer } from '@microdelta/machine-node';
 
-export { canonicalNodeLocation, createNodeClock, createNodeMachine, createNodeRandom, createNodeTimer };
+/** Pass through the read-only observation ports; this harness instruments only History's writer. */
+export { canonicalNodeLocation, createNodeClock, createNodeElapsedClock, createNodeMachine, createNodeRandom, createNodeSqliteCoordinatedReader, createNodeSqliteReader, createNodeTimer };
 
 /** One live connection as History receives it. */
 type IConnection = ReturnType<ISqliteCapability['openSqlite']>;

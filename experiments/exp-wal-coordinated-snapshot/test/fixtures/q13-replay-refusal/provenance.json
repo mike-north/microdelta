@@ -1,0 +1,64 @@
+{
+  "purpose": "Exact retained Q13 replay bytes as inert reporting controls; no native fixture generation or SQL",
+  "replayPacketSha256": "1f3a0b1725886f039283c5128747449c5725a186ed4dc76f851a2894f3bef3c8",
+  "originalVerdict": "INCONCLUSIVE",
+  "originalQ13Cleanup": false,
+  "beforeLabel": "R.begin-if-open",
+  "afterLabel": "R.anchor-if-open",
+  "files": [
+    {
+      "name": "image-1.json",
+      "bytes": 241,
+      "sha256": "15d30d5bdf1a1d466a3383b6251b0874c3d25a136eab60b933af939464a1ce1d",
+      "source": "/private/tmp/issue302-native-replay-handoff/raw-evidence/proof/Q13/image-1.json"
+    },
+    {
+      "name": "image-1-store.sqlite",
+      "bytes": 8192,
+      "sha256": "36cbaf90404a24da12214201a915e49f945eb5f5441c34a0f21c184d0962e6a8",
+      "source": "/private/tmp/issue302-native-replay-handoff/raw-evidence/proof/Q13/image-1-store.sqlite"
+    },
+    {
+      "name": "image-3.json",
+      "bytes": 253,
+      "sha256": "c0b5c5fef1d8962eb817cafd664cf5ca483ce3f1a2332312ff34498f8b6fd056",
+      "source": "/private/tmp/issue302-native-replay-handoff/raw-evidence/proof/Q13/image-3.json"
+    },
+    {
+      "name": "image-3-store.sqlite",
+      "bytes": 8192,
+      "sha256": "36cbaf90404a24da12214201a915e49f945eb5f5441c34a0f21c184d0962e6a8",
+      "source": "/private/tmp/issue302-native-replay-handoff/raw-evidence/proof/Q13/image-3-store.sqlite"
+    },
+    {
+      "name": "image-4.json",
+      "bytes": 547,
+      "sha256": "6c648b9d0552255225a1758bf53cdf3a7084ded38fca60a24d3e3cbe78c09894",
+      "source": "/private/tmp/issue302-native-replay-handoff/raw-evidence/proof/Q13/image-4.json"
+    },
+    {
+      "name": "image-4-store.sqlite",
+      "bytes": 8192,
+      "sha256": "36cbaf90404a24da12214201a915e49f945eb5f5441c34a0f21c184d0962e6a8",
+      "source": "/private/tmp/issue302-native-replay-handoff/raw-evidence/proof/Q13/image-4-store.sqlite"
+    },
+    {
+      "name": "image-4-store.sqlite-shm",
+      "bytes": 32768,
+      "sha256": "fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb",
+      "source": "/private/tmp/issue302-native-replay-handoff/raw-evidence/proof/Q13/image-4-store.sqlite-shm"
+    },
+    {
+      "name": "image-4-store.sqlite-wal",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source": "/private/tmp/issue302-native-replay-handoff/raw-evidence/proof/Q13/image-4-store.sqlite-wal"
+    },
+    {
+      "name": "result.json",
+      "bytes": 20183,
+      "sha256": "5e747ec6a37f46e4d8e36eddcbde001fc24f33f5e455e6924cb174a6079efbfe",
+      "source": "/private/tmp/issue302-native-replay-handoff/raw-evidence/proof/Q13/result.json"
+    }
+  ]
+}

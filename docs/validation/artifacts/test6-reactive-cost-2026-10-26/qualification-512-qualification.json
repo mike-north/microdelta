@@ -1,0 +1,355 @@
+{
+  "schema": "test6-reactive-cost-v1",
+  "population": 512,
+  "budgets": {
+    "memberIterations": 50000000,
+    "foldIterations": 500000000,
+    "leaseMilliseconds": 300000,
+    "phaseTimeoutMilliseconds": 180000
+  },
+  "identity": {
+    "revision": "e9fe7b9a02c8f631f05bf39d7671fba1faa8fc8a",
+    "fixtureSha256": {
+      "fixtures/contribution-report/reactive-cost.ts": "e19ad99c9c2614ebde3316c492e3aa29cbf561f0a7ef17c44d15d92d9c0822d2",
+      "fixtures/contribution-report/reactive-cost-worker.ts": "36ff83401e344cda0f821add7198c05d8d75f285db003ed39ca86fb07351e76d",
+      "fixtures/contribution-report/reactive-cost-qualification.ts": "bb9c8df2b93b817b987a8d92ab36a818fdadc47f8f06c476c2eedbeefce57063",
+      "fixtures/contribution-report/reactive-cost.test.ts": "1bb524fd7db582163b35715fa11d7c301e38a8e880507ffe3238731dcde45904",
+      "fixtures/contribution-report/test-d/reactive-cost.test-d.ts": "e5be2b6c992c75e9289b789a46490d3377a6a8f34ef22d1a5257e1243d10d6e7"
+    },
+    "generatedAlphaSha256": {
+      "packages/core/dist/api/microdelta.alpha.d.ts": "e0f3db4a60e6410cf6d9fa3d8530749ea47a9fa8759063342ce27013cc72ddf8",
+      "packages/definition/dist/api/definition.alpha.d.ts": "83afac90a1de1e111346685838ee1ecb87e79574078e19b8717c470d5efe2c15",
+      "packages/history/dist/api/history.alpha.d.ts": "ac56947d3a960a59cdbae71f3a332bf0012b06b50b305617a03765976c3be73b",
+      "packages/machine/dist/api/machine.alpha.d.ts": "a4e6b1218c5a0debcac22fe921aed60b382a4c4198b35a3b6ed83dadaf0c7d62",
+      "packages/machine-node/dist/api/machine-node.alpha.d.ts": "c892c370765e07c2f3929e156e613207c46e171149d09559c86ab7b55b1608cb",
+      "packages/resolution/dist/api/resolution.alpha.d.ts": "f6af84d0f1a0ccb75b21f243970bbba3a7e27b190dd4e85f415b4872e3ed372b",
+      "packages/supervision/dist/api/supervision.alpha.d.ts": "1f347a51ea445e58ee8ea9a4d2235751881459c05d1a8b0d2506ccea5ce485d8",
+      "packages/tracking/dist/api/tracking.alpha.d.ts": "be5d4199febd5b684dc67964795249983926c6a1e5c868198201bc011eab27d3"
+    },
+    "host": {
+      "node": "v24.14.0",
+      "platform": "darwin",
+      "architecture": "arm64",
+      "cpu": "Apple M5 Max"
+    }
+  },
+  "status": "passed",
+  "phases": [
+    {
+      "phase": "cold",
+      "pid": 52723,
+      "selectedIdentities": 512,
+      "bodies": {
+        "expensive": 512,
+        "leaf": 512,
+        "parent": 512,
+        "fold": 1,
+        "roster": 1,
+        "active": 0,
+        "maximumActive": 8,
+        "kernelCpuMicroseconds": 39410110,
+        "memberKernelCpuMicroseconds": 35883827,
+        "foldKernelCpuMicroseconds": 3526283,
+        "kernelSink": 1425668349
+      },
+      "requestWallMilliseconds": {
+        "expensive-members": 39673.919583,
+        "aggregate": 6965.5900829999955,
+        "parents": 4262.648624999994
+      },
+      "measurement": {
+        "wallMilliseconds": 51825.981125,
+        "cpuMicroseconds": {
+          "user": 51273570,
+          "system": 568856
+        },
+        "maxRssKibibytes": 372816,
+        "sampledHeapBytes": 102835168,
+        "timerSamples": 0,
+        "processFileIo": {
+          "reads": 0,
+          "writes": 0
+        },
+        "storeBytes": 17080320
+      },
+      "filter": {
+        "measurement": {
+          "wallMilliseconds": 0.38945800000510644,
+          "cpuMicroseconds": {
+            "user": 294,
+            "system": 22
+          },
+          "maxRssKibibytes": 357152,
+          "sampledHeapBytes": 173500648,
+          "timerSamples": 0,
+          "processFileIo": {
+            "reads": 0,
+            "writes": 0
+          },
+          "storeBytes": 17080320
+        },
+        "fixtureResults": 1538,
+        "fixtureAcceptances": 514,
+        "snapshotsUnchanged": true,
+        "requestsUnchanged": true
+      }
+    },
+    {
+      "phase": "restart",
+      "pid": 53786,
+      "selectedIdentities": 512,
+      "bodies": {
+        "expensive": 0,
+        "leaf": 0,
+        "parent": 0,
+        "fold": 0,
+        "roster": 0,
+        "active": 0,
+        "maximumActive": 0,
+        "kernelCpuMicroseconds": 0,
+        "memberKernelCpuMicroseconds": 0,
+        "foldKernelCpuMicroseconds": 0,
+        "kernelSink": 0
+      },
+      "requestWallMilliseconds": {
+        "expensive-members": 1311.998208,
+        "aggregate": 1387.5146659999998,
+        "parents": 2441.2524169999997
+      },
+      "measurement": {
+        "wallMilliseconds": 6198.331042,
+        "cpuMicroseconds": {
+          "user": 6272223,
+          "system": 226623
+        },
+        "maxRssKibibytes": 347600,
+        "sampledHeapBytes": 97897816,
+        "timerSamples": 0,
+        "processFileIo": {
+          "reads": 0,
+          "writes": 0
+        },
+        "storeBytes": 22224896
+      },
+      "filter": {
+        "measurement": {
+          "wallMilliseconds": 0.2791669999996884,
+          "cpuMicroseconds": {
+            "user": 235,
+            "system": 14
+          },
+          "maxRssKibibytes": 330400,
+          "sampledHeapBytes": 95733608,
+          "timerSamples": 0,
+          "processFileIo": {
+            "reads": 0,
+            "writes": 0
+          },
+          "storeBytes": 22224896
+        },
+        "fixtureResults": 1538,
+        "fixtureAcceptances": 2566,
+        "snapshotsUnchanged": true,
+        "requestsUnchanged": true
+      }
+    },
+    {
+      "phase": "parent-only",
+      "pid": 53786,
+      "selectedIdentities": 512,
+      "bodies": {
+        "expensive": 0,
+        "leaf": 0,
+        "parent": 1,
+        "fold": 0,
+        "roster": 0,
+        "active": 0,
+        "maximumActive": 1,
+        "kernelCpuMicroseconds": 0,
+        "memberKernelCpuMicroseconds": 0,
+        "foldKernelCpuMicroseconds": 0,
+        "kernelSink": 0
+      },
+      "requestWallMilliseconds": {
+        "expensive-members": 1178.8655419999996,
+        "aggregate": 1405.117959000001,
+        "parents": 2217.5199169999996
+      },
+      "measurement": {
+        "wallMilliseconds": 4829.406959,
+        "cpuMicroseconds": {
+          "user": 4784948,
+          "system": 130945
+        },
+        "maxRssKibibytes": 347952,
+        "sampledHeapBytes": 159046160,
+        "timerSamples": 0,
+        "processFileIo": {
+          "reads": 0,
+          "writes": 0
+        },
+        "storeBytes": 27451392
+      }
+    },
+    {
+      "phase": "unread-child",
+      "pid": 53786,
+      "selectedIdentities": 512,
+      "bodies": {
+        "expensive": 1,
+        "leaf": 0,
+        "parent": 0,
+        "fold": 0,
+        "roster": 0,
+        "active": 0,
+        "maximumActive": 1,
+        "kernelCpuMicroseconds": 69369,
+        "memberKernelCpuMicroseconds": 69369,
+        "foldKernelCpuMicroseconds": 0,
+        "kernelSink": 546988760
+      },
+      "requestWallMilliseconds": {
+        "expensive-members": 1226.3688330000004,
+        "aggregate": 1167.4757499999996,
+        "parents": 2232.349333
+      },
+      "measurement": {
+        "wallMilliseconds": 4653.612084,
+        "cpuMicroseconds": {
+          "user": 4612875,
+          "system": 120873
+        },
+        "maxRssKibibytes": 387184,
+        "sampledHeapBytes": 184761024,
+        "timerSamples": 0,
+        "processFileIo": {
+          "reads": 0,
+          "writes": 0
+        },
+        "storeBytes": 32600064
+      }
+    },
+    {
+      "phase": "consumed-child",
+      "pid": 53786,
+      "selectedIdentities": 512,
+      "bodies": {
+        "expensive": 1,
+        "leaf": 1,
+        "parent": 1,
+        "fold": 1,
+        "roster": 0,
+        "active": 0,
+        "maximumActive": 1,
+        "kernelCpuMicroseconds": 733978,
+        "memberKernelCpuMicroseconds": 67511,
+        "foldKernelCpuMicroseconds": 666467,
+        "kernelSink": 1952684581
+      },
+      "requestWallMilliseconds": {
+        "expensive-members": 1225.459208000002,
+        "aggregate": 1856.5362920000007,
+        "parents": 2452.2945419999996
+      },
+      "measurement": {
+        "wallMilliseconds": 5562.251750000001,
+        "cpuMicroseconds": {
+          "user": 5506158,
+          "system": 128396
+        },
+        "maxRssKibibytes": 437440,
+        "sampledHeapBytes": 249211992,
+        "timerSamples": 0,
+        "processFileIo": {
+          "reads": 0,
+          "writes": 0
+        },
+        "storeBytes": 38100992
+      }
+    },
+    {
+      "phase": "unread-input",
+      "pid": 53786,
+      "selectedIdentities": 512,
+      "bodies": {
+        "expensive": 0,
+        "leaf": 0,
+        "parent": 0,
+        "fold": 0,
+        "roster": 0,
+        "active": 0,
+        "maximumActive": 0,
+        "kernelCpuMicroseconds": 0,
+        "memberKernelCpuMicroseconds": 0,
+        "foldKernelCpuMicroseconds": 0,
+        "kernelSink": 0
+      },
+      "requestWallMilliseconds": {
+        "expensive-members": 1232.0584999999992,
+        "aggregate": 1192.8146659999984,
+        "parents": 2472.212625
+      },
+      "measurement": {
+        "wallMilliseconds": 4924.735208000002,
+        "cpuMicroseconds": {
+          "user": 4874117,
+          "system": 132383
+        },
+        "maxRssKibibytes": 475920,
+        "sampledHeapBytes": 255070640,
+        "timerSamples": 0,
+        "processFileIo": {
+          "reads": 0,
+          "writes": 0
+        },
+        "storeBytes": 43233280
+      }
+    },
+    {
+      "phase": "membership",
+      "pid": 53786,
+      "selectedIdentities": 513,
+      "bodies": {
+        "expensive": 1,
+        "leaf": 1,
+        "parent": 1,
+        "fold": 1,
+        "roster": 1,
+        "active": 0,
+        "maximumActive": 1,
+        "kernelCpuMicroseconds": 773360,
+        "memberKernelCpuMicroseconds": 68753,
+        "foldKernelCpuMicroseconds": 704607,
+        "kernelSink": 1952684581
+      },
+      "requestWallMilliseconds": {
+        "expensive-members": 1160.6284159999996,
+        "aggregate": 1910.6290829999998,
+        "parents": 2208.5615
+      },
+      "measurement": {
+        "wallMilliseconds": 5307.123709000003,
+        "cpuMicroseconds": {
+          "user": 5267522,
+          "system": 120891
+        },
+        "maxRssKibibytes": 475920,
+        "sampledHeapBytes": 144066584,
+        "timerSamples": 0,
+        "processFileIo": {
+          "reads": 0,
+          "writes": 0
+        },
+        "storeBytes": 48087040
+      }
+    }
+  ],
+  "limitations": [
+    "Process CPU/time/I-O describe whole phases; verification costs are outside the local filter interval.",
+    "maxRSS is the process-lifetime high-water mark, in KiB; it is not a per-phase RSS peak.",
+    "Heap uses baseline/final and timer samples; zero timer samples means boundary-only observations, not a covered peak.",
+    "Store bytes cover the main SQLite file at phase return, excluding sidecars.",
+    "The single-child cached-output oracle establishes observation behavior, not corpus-wide observation cost.",
+    "No facade-selected payload-load or fingerprint-attributed CPU/I-O measurement is exposed or claimed."
+  ]
+}

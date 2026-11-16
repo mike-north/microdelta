@@ -1,0 +1,26 @@
+{
+  "revision": "8d9e61cc4be3b2a415f996b04204f127819ef4c8",
+  "fixtureSha256": {
+    "fixtures/contribution-report/reactive-cost.ts": "e19ad99c9c2614ebde3316c492e3aa29cbf561f0a7ef17c44d15d92d9c0822d2",
+    "fixtures/contribution-report/reactive-cost-worker.ts": "36ff83401e344cda0f821add7198c05d8d75f285db003ed39ca86fb07351e76d",
+    "fixtures/contribution-report/reactive-cost-qualification.ts": "bb9c8df2b93b817b987a8d92ab36a818fdadc47f8f06c476c2eedbeefce57063",
+    "fixtures/contribution-report/reactive-cost.test.ts": "1bb524fd7db582163b35715fa11d7c301e38a8e880507ffe3238731dcde45904",
+    "fixtures/contribution-report/test-d/reactive-cost.test-d.ts": "e5be2b6c992c75e9289b789a46490d3377a6a8f34ef22d1a5257e1243d10d6e7"
+  },
+  "generatedAlphaSha256": {
+    "packages/core/dist/api/microdelta.alpha.d.ts": "e0f3db4a60e6410cf6d9fa3d8530749ea47a9fa8759063342ce27013cc72ddf8",
+    "packages/definition/dist/api/definition.alpha.d.ts": "83afac90a1de1e111346685838ee1ecb87e79574078e19b8717c470d5efe2c15",
+    "packages/history/dist/api/history.alpha.d.ts": "ac56947d3a960a59cdbae71f3a332bf0012b06b50b305617a03765976c3be73b",
+    "packages/machine/dist/api/machine.alpha.d.ts": "a4e6b1218c5a0debcac22fe921aed60b382a4c4198b35a3b6ed83dadaf0c7d62",
+    "packages/machine-node/dist/api/machine-node.alpha.d.ts": "c892c370765e07c2f3929e156e613207c46e171149d09559c86ab7b55b1608cb",
+    "packages/resolution/dist/api/resolution.alpha.d.ts": "f6af84d0f1a0ccb75b21f243970bbba3a7e27b190dd4e85f415b4872e3ed372b",
+    "packages/supervision/dist/api/supervision.alpha.d.ts": "1f347a51ea445e58ee8ea9a4d2235751881459c05d1a8b0d2506ccea5ce485d8",
+    "packages/tracking/dist/api/tracking.alpha.d.ts": "be5d4199febd5b684dc67964795249983926c6a1e5c868198201bc011eab27d3"
+  },
+  "host": {
+    "node": "v24.14.0",
+    "platform": "darwin",
+    "architecture": "arm64",
+    "cpu": "Apple M5 Max"
+  }
+}

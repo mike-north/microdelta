@@ -21,12 +21,14 @@ import type {
   ILifecycleEvent,
   IResolution,
   IResolutionOutcome,
+  IMembersResolution,
 } from '@microdelta/resolution';
 import { createTrackingObserver } from '@microdelta/tracking';
+import type { ITracked, ITrackingBinding, ITrackingObserver } from '@microdelta/tracking';
 
 import { controlledClock, observedSqlite, openHistory } from '../durable-history/support.js';
 import type { IObservedSqlite } from '../durable-history/support.js';
-import { authorSecret, bindingSlots, composeContributors } from './fixture.js';
+import { authorSecret, bindingSlots, composeContributors, defaultConfig } from './fixture.js';
 import type { IContributors, IMemberKey, IVariation } from './fixture.js';
 
 /** History's environment for every session. */
@@ -59,6 +61,10 @@ export interface ISession {
   readonly events: ILifecycleEvent[];
   /** Resolve one step with a fresh request key. */
   resolve(step: IBindingDescriptor, requestKey?: string): Promise<IResolutionOutcome>;
+  /** Resolve one keyed template step for every member under one top-level request. */
+  resolveMembers(template: string, step: string, requestKey?: string): Promise<IMembersResolution>;
+  /** Derive the default fixture's complete input fact through real Tracking and Value as a sensitivity control. */
+  deriveFullInputFact(): void;
   /** Release the lease and close the store. */
   close(): void;
 }
@@ -89,7 +95,20 @@ export function advanceClock(milliseconds: number): void {
 export const leaseMilliseconds = 3_600_000;
 
 /** Open a session over the store at `location`. */
-export function openSession(location: string, variation: IVariation = {}, plans: { readonly admission?: IAdmissionPlan; readonly observer?: IObserverPlan } = {}): ISession {
+export function openSession(
+  location: string,
+  variation: IVariation = {},
+  plans: { readonly admission?: IAdmissionPlan; readonly observer?: IObserverPlan } = {},
+  measurement: {
+    /** Exact inputs presented to real SHA, allowing complete-input work to be identified independently. */
+    readonly sha256Inputs?: string[];
+    /** One marker for each attempted complete author input wrapper, not member/argument views. */
+    readonly inputTrackingBindings?: number[];
+    /** Controllable test-only faults at real host/Tracking input-preparation ports. */
+    readonly failSha256Input?: { readonly input: string; readonly error: Error; active: boolean };
+    readonly failInputTracking?: { readonly error: Error; active: boolean };
+  } = {},
+): ISession {
   const sqlite = observedSqlite();
   const history = openHistory({ location, sqlite: sqlite.capability, clock });
   const acquisition = history.acquireWriter({ holder: `session:${String(requestCounter)}`, leaseMilliseconds });
@@ -97,8 +116,37 @@ export function openSession(location: string, variation: IVariation = {}, plans:
     throw new Error(`expected the writer lease, observed ${JSON.stringify(acquisition)}`);
   }
   const lease = acquisition.lease;
-  const machine = createNodeMachine();
+  const nodeMachine = createNodeMachine();
+  // Tests can classify real host hash work by its exact input without
+  // replacing SHA-256 or changing the runtime port's behavior.
+  const machine = {
+    ...nodeMachine,
+    sha256(input: string): string {
+      measurement.sha256Inputs?.push(input);
+      const failure = measurement.failSha256Input;
+      if (failure?.active === true && input === failure.input) {
+        throw failure.error;
+      }
+      return nodeMachine.sha256(input);
+    },
+  };
   const contributors = composeContributors(variation);
+  const trackingOwner = createTrackingObserver(machine);
+  // This adapter delegates every operation to real Tracking. It observes only
+  // complete author input wrappers, identified by their structural binding.
+  const tracking: ITrackingObserver = Object.freeze({
+    ...trackingOwner,
+    tracked<T extends object>(value: T, binding: ITrackingBinding): ITracked<T> {
+      if (binding.path.length === 1 && binding.path[0] === 'inputs') {
+        measurement.inputTrackingBindings?.push(1);
+        const failure = measurement.failInputTracking;
+        if (failure?.active === true) {
+          throw failure.error;
+        }
+      }
+      return trackingOwner.tracked(value, binding);
+    },
+  });
   const admissions: IAdmissionRequest[] = [];
   const events: ILifecycleEvent[] = [];
   const resolution = createResolution({
@@ -107,7 +155,7 @@ export function openSession(location: string, variation: IVariation = {}, plans:
     bindings: bindingSlots,
     environment,
     history,
-    tracking: createTrackingObserver(machine),
+    tracking,
     host: machine,
     admission: {
       admit(request: IAdmissionRequest): IAdmissionDecision {
@@ -138,6 +186,11 @@ export function openSession(location: string, variation: IVariation = {}, plans:
     admissions,
     events,
     resolve: (step, requestKey) => resolution.resolve({ step, requestKey: requestKey ?? freshRequestKey(), lease }),
+    resolveMembers: (template, step, requestKey) => resolution.resolveMembers({ template, step, requestKey: requestKey ?? freshRequestKey(), lease }),
+    deriveFullInputFact(): void {
+      const view = trackingOwner.tracked({ config: defaultConfig }, { path: ['inputs'] });
+      trackingOwner.capture(() => trackingOwner.snapshotOutput(view));
+    },
     close(): void {
       if (closed) {
         return;

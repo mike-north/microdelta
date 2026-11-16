@@ -1,11 +1,14 @@
 name: Check
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
 jobs:
   core:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [22, 24]
+        node: [24]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

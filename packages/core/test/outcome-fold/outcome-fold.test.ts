@@ -28,6 +28,7 @@
  * @see ../../../../docs/spec/acceptance.md (A-11)
  * @see ../../../../docs/plans/m5-operations.md (Folds; outcome-fold-coverage)
  */
+import { inspectProvenanceObservations } from '../provenance-wire-inspection.js';
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
 
 import { createStopController } from '../../src/index.js';
@@ -214,9 +215,10 @@ describe('settled statuses with coverage (acceptance 1, 3)', () => {
     world.decisions = { 'person:dee': 'cancelled' };
     const report = await runTally(location, { minimumAuthored: 2 });
     const stored = readProvenanceRecord(location, tallyReference(report));
-    expect(stored.formatVersion).toBe(4);
-    // Resolution's version-4 provenance stores an outcome fold's record as plain data of this shape.
-    const content = stored.content as { readonly kind: string; readonly over: unknown; readonly membership: unknown; readonly observations: readonly { readonly binding: { readonly path: readonly string[] } }[] };
+    expect(stored.formatVersion).toBe(5);
+    expect(stored.content).toHaveProperty('semanticVersion', 4);
+    // Outcome semantic variant 4 keeps membership plain while observations use wire-5 tuples.
+    const content = stored.content as { readonly kind: string; readonly over: unknown; readonly membership: unknown };
     expect(content.kind).toBe('outcome-fold');
     expect(content.over).toEqual({ scope: analysis, role: 'step', slot: 'summary', template: 'contributor', collection: 'contributors' });
     expect(content.membership).toEqual([
@@ -225,7 +227,7 @@ describe('settled statuses with coverage (acceptance 1, 3)', () => {
       { key: 'person:cy', status: 'skipped' },
       { key: 'person:dee', status: 'cancelled' },
     ]);
-    const bindings = [...new Set(content.observations.map((item) => JSON.stringify(item.binding.path)))].sort();
+    const bindings = [...new Set(inspectProvenanceObservations(content).map((item) => JSON.stringify(item.binding.path)))].sort();
     expect(bindings).toEqual(['["callable","tally"]', '["entry","person:ada"]', '["self"]']);
   });
 });

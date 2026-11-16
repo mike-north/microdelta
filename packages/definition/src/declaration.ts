@@ -34,6 +34,7 @@ import type {
   IInvocationScope,
 } from './invocation.js';
 import type { IAnyStepSlot, IStepSlot, ISuppliedStepRecord } from './slot.js';
+import { sourceSlotName, type IAnySourceSlot, type ISourceSlot, type ISuppliedSourceRecord } from './source-slot.js';
 import { stepSlotName } from './slot.js';
 import type { IBindingDescriptor } from './descriptor.js';
 import type { IMemberSupplier } from './template.js';
@@ -57,6 +58,8 @@ export interface IDeclarationBrand<TFamily extends IBindingFamily> {
  */
 export type ISourceRunContext<TFamily extends IBindingFamily, TResult> = TFamily['source'] & {
   readonly previous: IApply<TFamily['previous'], TResult> | undefined;
+  /** Current request evidence, only when Resolution supplies this declared collection's capture. */
+  readonly evidence?: IApply<TFamily['views'], TResult>;
 };
 
 /**
@@ -66,6 +69,8 @@ export type ISourceRunContext<TFamily extends IBindingFamily, TResult> = TFamily
  */
 export type IFinalityContext<TFamily extends IBindingFamily, TResult> = TFamily['source'] & {
   readonly previous: IApply<TFamily['previous'], TResult>;
+  /** The same request capture used to interpret current source evidence, when one is bound. */
+  readonly evidence?: IApply<TFamily['views'], TResult>;
 };
 
 /**
@@ -125,7 +130,7 @@ export type IResultOf<TFamily extends IBindingFamily, TDeclaration> =
   TDeclaration extends ISourceDeclaration<TFamily, infer TResult> ? TResult
     // A member source's callbacks take the member binding; a `never` member accepts any member type.
     : TDeclaration extends ISourceDeclaration<TFamily, infer TResult, { readonly member: never }> ? TResult
-    : TDeclaration extends IStepSlot<TFamily, readonly unknown[], infer TResult> ? TResult
+    : TDeclaration extends IStepSlot<TFamily, readonly unknown[], infer TResult> | ISourceSlot<TFamily, readonly unknown[], infer TResult> ? TResult
       : TDeclaration extends { readonly kind: 'memo'; readonly run: (context: never) => infer TResult } ? Awaited<TResult>
         : never;
 
@@ -135,7 +140,7 @@ export type IResultOf<TFamily extends IBindingFamily, TDeclaration> =
  * a supplied step slot bound at composition.
  * @alpha
  */
-export type IChildDeclaration<TFamily extends IBindingFamily> = IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily> | IAnyStepSlot<TFamily>;
+export type IChildDeclaration<TFamily extends IBindingFamily> = IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily> | IAnyStepSlot<TFamily> | IAnySourceSlot<TFamily>;
 
 /**
  * A memo's children: each key is a call name. For a sibling declaration the
@@ -152,7 +157,7 @@ export type IChildDeclarations<TFamily extends IBindingFamily> = { readonly [cal
  * @alpha
  */
 export type ICallOf<TFamily extends IBindingFamily, TChild> =
-  TChild extends IStepSlot<TFamily, infer TParameters, infer TResult> ? IDeclaredCallHandle<IApply<TFamily['views'], TResult>, TParameters>
+  TChild extends IStepSlot<TFamily, infer TParameters, infer TResult> | ISourceSlot<TFamily, infer TParameters, infer TResult> ? IDeclaredCallHandle<IApply<TFamily['views'], TResult>, TParameters>
     : IDeclaredCallHandle<IApply<TFamily['views'], IResultOf<TFamily, TChild>>>;
 
 /**
@@ -280,6 +285,16 @@ export interface IPreviousSupplier<TFamily extends IBindingFamily> {
 }
 
 /**
+ * Resolution's tracked view of one declared source's captured current evidence.
+ * The declaration's result type fixes the view type; this supplier selects
+ * neither a different relationship nor an arbitrary author-provided value.
+ * @alpha
+ */
+export interface ISourceEvidenceSupplier<TFamily extends IBindingFamily> {
+  view<TResult>(declaration: ISourceDeclaration<TFamily, TResult, never>): IApply<TFamily['views'], TResult>;
+}
+
+/**
  * The member binding one invocation is applied with: Resolution's member
  * supplier and the instance descriptor it is asked about.
  */
@@ -310,9 +325,9 @@ export interface ISourceRecord<TFamily extends IBindingFamily> {
   readonly kind: 'source';
   readonly declaration: IAnySourceDeclaration<TFamily>;
   /** Pair the actual `run` with its assembled context (and its member binding, for an instance) and hand both to the invoker. */
-  apply<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily> | undefined, invoke: IAuthorInvoker<TOutcome>, member: IMemberAccess<TFamily> | undefined): TOutcome;
+  apply<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily> | undefined, invoke: IAuthorInvoker<TOutcome>, member: IMemberAccess<TFamily> | undefined, evidence?: ISourceEvidenceSupplier<TFamily>): TOutcome;
   /** Pair the actual `finality` with its assembled context; absent hooks reject. */
-  applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>, member: IMemberAccess<TFamily> | undefined): TOutcome;
+  applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>, member: IMemberAccess<TFamily> | undefined, evidence?: ISourceEvidenceSupplier<TFamily>): TOutcome;
   /** Dispatch a call of this source as a declared child, typed by its result. */
   dispatch(port: IInvocationPort<TFamily>, scope: IInvocationScope, witness: IInvocationWitness): Promise<IChildResult<unknown>>;
   /** Mint and record a template instance: a declaration with a new complete subject and the same callbacks. */
@@ -322,7 +337,7 @@ export interface ISourceRecord<TFamily extends IBindingFamily> {
 /** One pinned child edge of a memo: a sibling step declaration, or a supplied step slot by name. */
 export type IChildEdge<TFamily extends IBindingFamily> =
   | { readonly kind: 'sibling'; readonly declaration: IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily> }
-  | { readonly kind: 'slot'; readonly slot: string };
+  | { readonly kind: 'slot'; readonly slot: string; readonly source: boolean };
 
 /** A memo step's record: its erased declaration, pinned children and typed invocation closure. */
 export interface IMemoRecord<TFamily extends IBindingFamily> {
@@ -357,7 +372,7 @@ export interface IMemoRecord<TFamily extends IBindingFamily> {
 }
 
 /** Any record a builder instance keeps: a step's, a strict or outcome fold's, or a supplied step implementation's. */
-export type IStepRecord<TFamily extends IBindingFamily> = ISourceRecord<TFamily> | IMemoRecord<TFamily> | IFoldRecord<TFamily> | IOutcomeFoldRecord<TFamily> | ISuppliedStepRecord<TFamily>;
+export type IStepRecord<TFamily extends IBindingFamily> = ISourceRecord<TFamily> | IMemoRecord<TFamily> | IFoldRecord<TFamily> | IOutcomeFoldRecord<TFamily> | ISuppliedStepRecord<TFamily> | ISuppliedSourceRecord<TFamily>;
 
 /** One builder instance's records, keyed by the declarations it minted. */
 export type IDeclarationRecords<TFamily extends IBindingFamily> = WeakMap<object, IStepRecord<TFamily>>;
@@ -425,21 +440,29 @@ export function declareSourceWith<TFamily extends IBindingFamily, TResult, TExtr
   const recordOf = (current: ISourceDeclaration<TFamily, TResult, TExtra>): ISourceRecord<TFamily> => ({
     kind: 'source',
     declaration: current,
-    apply<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily> | undefined, invoke: IAuthorInvoker<TOutcome>, member: IMemberAccess<TFamily> | undefined): TOutcome {
+    apply<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily> | undefined, invoke: IAuthorInvoker<TOutcome>, member: IMemberAccess<TFamily> | undefined, evidence?: ISourceEvidenceSupplier<TFamily>): TOutcome {
       checkBindings(bindings, 'previous');
+      checkBindings(bindings, 'evidence');
       const extra = extend(bindings, member);
       const carrier = previous === undefined ? undefined : checkCarrier(previous.carrier(current));
-      const context: ISourceRunContext<TFamily, TResult> & TExtra = { ...bindings, ...extra, previous: carrier };
+      const context: ISourceRunContext<TFamily, TResult> & TExtra = {
+        ...bindings, ...extra, previous: carrier,
+        ...(evidence === undefined ? {} : { evidence: evidence.view(current) }),
+      };
       Object.freeze(context);
       return invoke(run, context);
     },
-    applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>, member: IMemberAccess<TFamily> | undefined): TOutcome {
+    applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>, member: IMemberAccess<TFamily> | undefined, evidence?: ISourceEvidenceSupplier<TFamily>): TOutcome {
       if (finality === undefined) {
         reject('invalid-callback', `Source ${current.subject} declares no finality hook.`);
       }
       checkBindings(bindings, 'previous');
+      checkBindings(bindings, 'evidence');
       const extra = extend(bindings, member);
-      const context: IFinalityContext<TFamily, TResult> & TExtra = { ...bindings, ...extra, previous: checkCarrier(previous.carrier(current)) };
+      const context: IFinalityContext<TFamily, TResult> & TExtra = {
+        ...bindings, ...extra, previous: checkCarrier(previous.carrier(current)),
+        ...(evidence === undefined ? {} : { evidence: evidence.view(current) }),
+      };
       Object.freeze(context);
       return invoke(finality, context);
     },
@@ -508,16 +531,17 @@ export function declareMemoWith<TFamily extends IBindingFamily, TChildren extend
     if (slot === '') {
       reject('illegal-edge', 'A child slot name must be nonempty.');
     }
-    const suppliedSlot = stepSlotName(child);
+    const sourceSlot = sourceSlotName(child);
+    const suppliedSlot = sourceSlot ?? stepSlotName(child);
     if (suppliedSlot !== undefined) {
-      entries.push([slot, { kind: 'slot', slot: suppliedSlot }]);
+      entries.push([slot, { kind: 'slot', slot: suppliedSlot, source: sourceSlot !== undefined }]);
       continue;
     }
     const childRecord = records.get(child);
     if (childRecord === undefined) {
       reject('forged-declaration', `Child ${slot} is not a declaration or step slot this family minted.`);
     }
-    if (childRecord.kind === 'supplied-step') {
+    if (childRecord.kind === 'supplied-step' || childRecord.kind === 'supplied-source') {
       reject('illegal-edge', `Child ${slot} is a supplied step; name its step slot instead, and bind the step at composition.`);
     }
     if (childRecord.kind === 'fold' || childRecord.kind === 'outcome-fold') {
@@ -725,7 +749,7 @@ function checkChildRecord(read: IReadOptions): void {
  * callback context, and must not claim the context name Definition supplies.
  * Field values are never read.
  */
-export function checkBindings(bindings: object, reserved: 'previous' | 'calls' | 'args' | 'member' | 'members'): void {
+export function checkBindings(bindings: object, reserved: 'previous' | 'calls' | 'args' | 'member' | 'members' | 'evidence'): void {
   if (!isPlainRecord(bindings)) {
     reject('invalid-bindings', 'Bindings must be a plain record of enumerable own data fields.');
   }
@@ -739,7 +763,7 @@ export function checkBindings(bindings: object, reserved: 'previous' | 'calls' |
  * data property. Its data is passed through unread; the exact eligible result
  * it stands for stays with Resolution.
  */
-function checkCarrier<TCarrier>(carrier: TCarrier): TCarrier {
+export function checkCarrier<TCarrier>(carrier: TCarrier): TCarrier {
   if (typeof carrier !== 'object' || carrier === null || !Object.isFrozen(carrier)) {
     reject('invalid-previous', 'A previous-result carrier must be a frozen record.');
   }

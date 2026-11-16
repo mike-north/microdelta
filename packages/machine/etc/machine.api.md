@@ -21,6 +21,18 @@ export interface IClockCapability {
 }
 
 // @alpha
+export interface ICommandProcessCapability {
+    readonly arguments: readonly string[];
+    keepAlive(): () => void;
+    loadModule(path: string): Promise<unknown>;
+    onSignal(signal: 'SIGINT' | 'SIGTERM', listener: () => void): () => void;
+    resolvePath(path: string): string;
+    setExitCode(code: number): void;
+    writeStderr(text: string): void;
+    writeStdout(text: string): void;
+}
+
+// @alpha
 export interface IElapsedClockCapability {
     currentElapsedMilliseconds(): number;
 }
@@ -58,7 +70,21 @@ export interface ISqliteConnection {
 }
 
 // @alpha
+export interface ISqliteCoordinatedReadCapability {
+    openSqliteCoordinatedRead(location: string): ISqliteCoordinatedReadScope;
+}
+
+// @alpha
+export interface ISqliteCoordinatedReadScope {
+    begin(): void;
+    close(): void;
+    end(): void;
+    prepare(sql: string): ISqliteReadStatement;
+}
+
+// @alpha
 export interface ISqliteOpenOptions {
+    readonly creation?: 'exclusive';
     readonly journalMode: 'wal' | 'delete';
 }
 
@@ -118,6 +144,12 @@ export interface ITimerOptions {
 export class SqliteBusyError extends Error {
     constructor(message: string, waitedMilliseconds: number, options?: ErrorOptions);
     readonly waitedMilliseconds: number;
+}
+
+// @alpha
+export class SqliteReadError extends Error {
+    constructor(code: SqliteReadError['code'], message: string, options?: ErrorOptions);
+    readonly code: 'absent' | 'unsupported' | 'corrupt' | 'recovery-required';
 }
 
 ```

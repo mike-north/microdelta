@@ -60,8 +60,12 @@ Read this entry point, then only the contracts relevant to the task:
 | [Composition](composition.md) | Fixed step graph, dynamic result instances, higher-order binding | Graphs, nesting, fanout |
 | [Execution](execution.md) | Current validation, exact references, retention, publication | Reuse, persistence, recovery |
 | [Operations](operations.md) | Readiness, preview, per-run acquisition retry, shared rate admission, cancellation, trial, accounting, CLI | Run lifetime or operational work |
+| [Finite exact History selection](../plans/finite-history-selection.md) | Selected #309 no-init, internally released exact fact/fingerprint operation and its distinct WAL coordination authority | Implementing the bounded A-16f/CLI-001 library dependency without adopting a general inspector |
+| [Finite exact-result CLI](../plans/finite-history-cli.md) | Selected #311 installed fact-only command, distinct WAL coordination permission, external v1 MDS1 wire and finite failures | Implementing or consuming exact retained-result inspection without adopting the broader #167 checkpoint |
 | [Acquisition decision and handoff](../plans/data-acquisition-retries.md) and [#221 shared-rate coordination design](../plans/shared-rate-coordination.md) | Accepted 2026-10-24 supersession and implementation readiness; #221 engineering choices are supervisory-selected, with runtime implementation still pending | Implementing #221 to its selected design, or migrating M5 retry behavior |
-| [Retry-classification design candidate](../plans/retry-classification.md) | Proposed engineering seam and bounded runtime handoff under accepted RUN-011; not delivered behavior | Reviewing #220 or preparing its separately accepted implementation follow-up |
+| [Retry-classification accepted design](../plans/retry-classification.md) | Supervisory-accepted engineering seam and bounded #235 runtime handoff under RUN-011; runtime delivery pending | Implementing or reviewing #235 against the accepted #220 design |
+| [Scoped current detail calls proposal](../plans/scoped-source-calls.md) | Supervisory-selected #252 bounded source-callable contract beneath independent person summaries; public spelling proposed and runtime undelivered | Reviewing the completed-search report gap before implementation |
+| [Within-person discovery design](../plans/within-person-discovery.md), [experiment charter](../plans/within-person-discovery-experiment.md), and [bounded private-alpha delivery](../plans/within-person-bounded-traversal-delivery.md) | Selected #297 Candidate A and charter ceilings; #315 records observed bounded local facade failure/recovery proof, while full #301/WPD-1–11 and report qualification remain open | Reviewing the staged traversal capability, its local evidence, and remaining full-report qualification gates |
 | [Acceptance](acceptance.md) | Cross-contract scenarios, expected outcomes, proof obligations | Writing tests or closing a gate |
 | [Experiments](experiments.md) | Bounded unknowns, fixtures, evidence, adoption gates | After foundation, for dependent runtime work |
 | [Milestones](../milestones.md) | Delivery order and independently reportable quality gates | Selecting work |
@@ -130,6 +134,30 @@ independent observation lifetime, current/stale preview meaning and consumer-own
 cache policy. RUN-007/008 own requirements; the plan identifies remaining API,
 retention, disposal and aggregate choices and bounded readiness recommendations.
 This is not a claim of delivered behavior or whole-issue implementation readiness.
+
+## Proposed issue plans
+
+The [controlled roster plan](../plans/controlled-roster.md) records the owner-
+selected first contribution-report scope for issue #170: complete each selected
+employee's paginated search to count and stable PR IDs before detail fanout; use
+fixed shared limits, provider cooldowns, retry ceilings and cancellation; and
+provide separately permissionable CLI run-start and progress observation. The
+24-hour delivery target is not a guarantee or milestone exit. The plan preserves
+full TEST-3/4 and TEST-5/6 as separate qualification gates, including the full
+historical CLI inspection criterion. Page-streaming, advanced adaptive rate policy
+and sophisticated discovery-order fairness remain deferred mechanisms, not
+accepted first-delivery requirements; this scope does not claim full A-12j/l,
+RUN-019, CLI-001–004, M6, or M7 delivery. The normative full-target contracts
+remain unchanged and their evidence gates remain open.
+
+The bounded exact-execution observation engineering contract is accepted under
+supervisory authority in [CLI-005](operations.md#cli-005--bounded-exact-execution-observation)
+and [A-21](acceptance.md#exact-execution-observation-cases). This records a
+supervisor-selected engineering design, not human selection of its mechanisms;
+runtime delivery and full issue-167 readiness remain unclaimed. The
+[standalone inspection proposal](../plans/standalone-inspection.md) remains the
+home for the broader CLI alternatives and full M6 work. Foreground/detached
+lifetime and interrupt choices remain unresolved.
 
 ## Current checkout
 

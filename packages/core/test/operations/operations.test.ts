@@ -29,6 +29,7 @@
  */
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
 import { SupervisionError, createStopController } from '@microdelta/supervision';
+import type { IRetryDecisionInput, ISourceRetryPolicy } from '@microdelta/supervision';
 
 import { assessmentSubject, createWorld, installWorld } from './fixture.js';
 import type { IWorld } from './fixture.js';
@@ -218,6 +219,53 @@ describe('the finite acquisition retry policy (RUN-011)', () => {
       const pr1 = memberOf(result.value, 'pr-1');
       expect(pr1.status).toBe('pending');
       expect(pr1.status === 'pending' ? pr1.blocked?.kind : undefined).toBe('policy-exhausted');
+    } finally {
+      session.close();
+    }
+  });
+
+  test('the rate-only subcap applies to untimed normalized rate refusals', async () => {
+    world.provider.script('assess', 'pr-1', ['rate-limit', 'rate-limit', 'rate-limit', 'ok']);
+    world.options['pr-1'] = { retry: { maxAttempts: 5, rateLimitRetries: 1 } };
+    const session = openSession(stores, timer);
+    try {
+      const result = await driveUntilSettled(timer, members(session));
+      expect(received('pr-1')).toHaveLength(2);
+      const pr1 = memberOf(result.value, 'pr-1');
+      expect(pr1.status).toBe('pending');
+      expect(pr1.status === 'pending' ? pr1.blocked?.kind : undefined).toBe('policy-exhausted');
+      expect(session.usage().reports).toBeGreaterThanOrEqual(2);
+    } finally {
+      session.close();
+    }
+  });
+
+  test('an exact source policy can retry a contextual 404 before the conservative default stop', async () => {
+    world.provider.script('assess', 'pr-1', ['contextual-404', 'ok']);
+    const source = { source: 'catalog', service: 'catalog-api', connection: 'org-a-read' } as const;
+    world.options['pr-1'] = { retrySource: source };
+    const observed: IRetryDecisionInput[] = [];
+    const policy: ISourceRetryPolicy = {
+      id: 'catalog-policy',
+      scope: source,
+      decide(input) {
+        observed.push(input);
+        return { kind: 'retry-after', delayMilliseconds: 5_000 };
+      },
+    };
+    const session = openSession(stores, timer);
+    try {
+      const started = members(session, { retryPolicies: [policy] });
+      let settled = false;
+      void started.done.then(() => { settled = true; }, () => { settled = true; });
+      await until(() => timer.pending().includes(T0 + 5_000) || settled, 'the source decision schedules its delay or the member settles');
+      expect(observed).toHaveLength(1);
+      expect(observed[0]?.facts).toEqual({ httpStatus: 404, conditions: ['resource-expected-later'] });
+      expect(observed[0]?.outcome).toEqual({ kind: 'failed', transient: false });
+      const result = await driveUntilSettled(timer, started);
+      expect(memberOf(result.value, 'pr-1').status).toBe('succeeded');
+      expect(received('pr-1')).toHaveLength(2);
+      expect(new Set(received('pr-1').map((request) => request.operation)).size).toBe(1);
     } finally {
       session.close();
     }

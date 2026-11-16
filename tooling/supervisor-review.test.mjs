@@ -8,13 +8,14 @@ import {
   createGitHubApi,
   runSupervisorReview,
   validateProtection,
+  validateChecks,
 } from './supervisor-review.mjs';
 
 const prNumber = 34;
 const reviewedHead = 'a'.repeat(40);
 
-test('the protected Actions contract requires metadata and both remaining Node jobs', () => {
-  assert.deepEqual(REQUIRED_BRANCH_CHECKS, ['PR metadata', 'core (22)', 'core (24)']);
+test('the protected Actions contract requires metadata and the Node 24-only baseline', () => {
+  assert.deepEqual(REQUIRED_BRANCH_CHECKS, ['PR metadata', 'core (24)']);
 });
 
 function scenario(overrides = {}) {
@@ -24,7 +25,6 @@ function scenario(overrides = {}) {
     protection: {
       branch: 'main',
       requiresPullRequest: true,
-      strict: true,
       enforceAdmins: true,
       resolveConversations: true,
       requiredContexts: [...REQUIRED_BRANCH_CHECKS, REQUIRED_STATUS_CONTEXT],
@@ -45,8 +45,7 @@ function scenario(overrides = {}) {
     },
     requiredChecks: [
       { name: 'PR metadata', bucket: 'pass' },
-      { name: 'core (22)', bucket: 'pending' },
-      { name: 'core (24)', bucket: 'pass' },
+      { name: 'core (24)', bucket: 'pending' },
       { name: REQUIRED_STATUS_CONTEXT, bucket: 'pending' },
     ],
     copilotReviews: [{
@@ -57,6 +56,8 @@ function scenario(overrides = {}) {
       submitted: true,
     }],
     pendingReviewRequests: [],
+    immediateMergeOnEnable: false,
+    statusReadbackOverride: undefined,
     ...overrides,
   };
   let readPullRequestCount = 0;
@@ -77,17 +78,22 @@ function scenario(overrides = {}) {
     async createReviewRecord(record) { calls.push(['createReviewRecord', record]); return `${state.pullRequest.url}#issuecomment-123`; },
     async setCommitStatus(status) {
       calls.push(['setCommitStatus', status]);
+      if (status.state === 'success') state.successStatusPublished = true;
       return { sha: status.sha, context: status.context, state: status.state };
     },
     async readCommitStatus(sha, context) {
       calls.push(['readCommitStatus', sha, context]);
-      return { sha, context, state: 'success' };
+      const result = state.statusReadbackOverride ?? { sha, context, state: 'success' };
+      if (result.sha === sha && result.context === context && result.state === 'success') state.successStatusReadBack = true;
+      return result;
     },
     async enableAutoMerge(request) {
       calls.push(['enableAutoMerge', request]);
       if (state.changeHeadOnEnable) state.pullRequest.headRefOid = 'b'.repeat(40);
       if (state.pullRequest.headRefOid !== request.expectedHeadOid) throw new Error('head changed at auto-merge boundary');
       state.pullRequest.autoMergeEnabled = true;
+      state.successStatusVerifiedWhenAutoMergeEnabled = state.successStatusReadBack === true;
+      if (state.immediateMergeOnEnable) state.pullRequest.merged = true;
       return { enabled: true, expectedHeadOid: request.expectedHeadOid };
     },
     async readOutcome(number) {
@@ -117,9 +123,30 @@ test('arms auto-merge for the reviewed head while required CI is still pending',
   assert.ok(calls.some(([name, sha, context]) => name === 'readCommitStatus' && sha === reviewedHead && context === REQUIRED_STATUS_CONTEXT));
   const arm = calls.find(([name]) => name === 'enableAutoMerge')?.[1];
   assert.deepEqual(arm, { pullRequestNumber: prNumber, expectedHeadOid: reviewedHead });
-  assert.ok(calls.findIndex(([name, status]) => name === 'setCommitStatus' && status.state === 'success') > calls.findIndex(([name]) => name === 'enableAutoMerge'));
+  assert.ok(calls.findIndex(([name, status]) => name === 'setCommitStatus' && status.state === 'success') < calls.findIndex(([name]) => name === 'enableAutoMerge'));
+  assert.ok(calls.findIndex(([name]) => name === 'readCommitStatus') < calls.findIndex(([name]) => name === 'enableAutoMerge'));
   assert.match(calls.find(([name]) => name === 'createReviewRecord')[1].body, /issue 34 acceptance/u);
 });
+
+test('verified exact-head success precedes auto-merge even when GitHub could merge immediately', async () => {
+  const { api, state, request } = scenario({ immediateMergeOnEnable: true });
+  const result = await runSupervisorReview(request, api);
+  assert.equal(state.successStatusVerifiedWhenAutoMergeEnabled, true);
+  assert.equal(result.outcome, 'merged');
+});
+
+for (const [name, readback, changes] of [
+  ['pending status', { sha: reviewedHead, context: REQUIRED_STATUS_CONTEXT, state: 'pending' }, {}],
+  ['wrong head', { sha: 'b'.repeat(40), context: REQUIRED_STATUS_CONTEXT, state: 'success' }, {}],
+  ['moved pull request head', undefined, { changeHeadOnRead: 3 }],
+]) {
+  test(`does not enable auto-merge after ${name} at the final review gate`, async () => {
+    const { api, calls, state, request } = scenario({ statusReadbackOverride: readback, ...changes });
+    await assert.rejects(runSupervisorReview(request, api), /status readback|head changed/u);
+    assert.equal(calls.some(([name]) => name === 'enableAutoMerge'), false);
+    assert.equal(state.pullRequest.autoMergeEnabled, false);
+  });
+}
 
 for (const [name, overrides, requestOverrides = {}] of [
   ['changed head at preflight', { pullRequest: { number: prNumber, state: 'OPEN', isDraft: false, baseRefName: 'main', headRefOid: 'b'.repeat(40), url: 'https://github.com/mike-north/microdelta/pull/34', unresolvedThreads: 0, autoMergeEnabled: false } }],
@@ -131,21 +158,10 @@ for (const [name, overrides, requestOverrides = {}] of [
   ['unresolved review conversations', { pullRequest: { number: prNumber, state: 'OPEN', isDraft: false, baseRefName: 'main', headRefOid: reviewedHead, url: 'https://github.com/mike-north/microdelta/pull/34', unresolvedThreads: 1, autoMergeEnabled: false } }],
   ['missing review scope', {}, { scope: ' ' }],
   ['missing review evidence', {}, { evidence: '' }],
-  ['failed required Node 22 CI', { requiredChecks: [
-    { name: 'PR metadata', bucket: 'pass' },
-    { name: 'core (22)', bucket: 'fail' },
-    { name: 'core (24)', bucket: 'pass' },
-    { name: REQUIRED_STATUS_CONTEXT, bucket: 'pending' },
-  ] }],
   ['failed required Node 24 CI', { requiredChecks: [
     { name: 'PR metadata', bucket: 'pass' },
     { name: 'core (22)', bucket: 'pass' },
     { name: 'core (24)', bucket: 'fail' },
-    { name: REQUIRED_STATUS_CONTEXT, bucket: 'pending' },
-  ] }],
-  ['missing required Node 22 CI', { requiredChecks: [
-    { name: 'PR metadata', bucket: 'pass' },
-    { name: 'core (24)', bucket: 'pass' },
     { name: REQUIRED_STATUS_CONTEXT, bucket: 'pending' },
   ] }],
   ['missing required Node 24 CI', { requiredChecks: [
@@ -166,20 +182,20 @@ for (const [name, overrides, requestOverrides = {}] of [
   ['Copilot requested but not submitted', { pendingReviewRequests: ['copilot-pull-request-reviewer[bot]'] }],
   ['Copilot requested changes', { copilotReviews: [{ authorLogin: 'copilot-pull-request-reviewer[bot]', authorType: 'Bot', commitOid: reviewedHead, state: 'CHANGES_REQUESTED', submitted: true }] }],
   ['supervisor review is not required by protection', { protection: {
-    branch: 'main', requiresPullRequest: true, strict: true, enforceAdmins: true,
+    branch: 'main', requiresPullRequest: true, enforceAdmins: true,
     resolveConversations: true, requiredContexts: [...REQUIRED_BRANCH_CHECKS],
   } }],
   ['required review protection is absent', { protection: {
-    branch: 'main', requiresPullRequest: true, strict: true, enforceAdmins: true,
+    branch: 'main', requiresPullRequest: true, enforceAdmins: true,
     resolveConversations: true,
     requiredContexts: [...REQUIRED_BRANCH_CHECKS],
     checkSources: Object.fromEntries(REQUIRED_BRANCH_CHECKS.map(name => [name, 'github-actions'])),
   } }],
   ['an existing GitHub Actions source restriction is missing', { protection: {
-    branch: 'main', requiresPullRequest: true, strict: true, enforceAdmins: true,
+    branch: 'main', requiresPullRequest: true, enforceAdmins: true,
     resolveConversations: true,
     requiredContexts: [...REQUIRED_BRANCH_CHECKS, REQUIRED_STATUS_CONTEXT],
-    checkSources: { ...Object.fromEntries(REQUIRED_BRANCH_CHECKS.map(name => [name, 'github-actions'])), 'core (22)': null },
+    checkSources: { ...Object.fromEntries(REQUIRED_BRANCH_CHECKS.map(name => [name, 'github-actions'])), 'core (24)': null },
   } }],
 ]) {
   test(`fails closed for ${name} before any review or status write`, async () => {
@@ -215,11 +231,12 @@ test('a head change after pending status but before arming leaves no success or 
   assert.equal(calls.some(([name]) => name === 'enableAutoMerge'), false);
 });
 
-test('the expected-head API guard rejects a push in the arming race without releasing review', async () => {
+test('the expected-head API guard refuses arming after a push races with final verification', async () => {
   const { api, calls, request, state } = scenario({ changeHeadOnEnable: true });
   await assert.rejects(runSupervisorReview(request, api), /head changed at auto-merge boundary/u);
   const statuses = calls.filter(([name]) => name === 'setCommitStatus').map(([, status]) => status.state);
-  assert.deepEqual(statuses, ['pending']);
+  assert.deepEqual(statuses, ['pending', 'success']);
+  assert.equal(calls.filter(([name]) => name === 'setCommitStatus').at(-1)[1].sha, reviewedHead);
   assert.equal(state.pullRequest.autoMergeEnabled, false);
 });
 
@@ -230,7 +247,7 @@ test('pending checks remain required and no administrator bypass is requested', 
   assert.deepEqual(Object.keys(arm).sort(), ['expectedHeadOid', 'pullRequestNumber']);
 });
 
-test('ordinary review waits for Node 24 when Node 22 already passed', async () => {
+test('ordinary review still waits for Node 24 when a retired Node 22 result passed', async () => {
   const { api, request } = scenario({ requiredChecks: [
     { name: 'PR metadata', bucket: 'pass' },
     { name: 'core (22)', bucket: 'pass' },
@@ -251,8 +268,8 @@ test('already-passing CI is still eligible for the exact-head review flow', asyn
   assert.ok(calls.some(([name]) => name === 'enableAutoMerge'));
 });
 
-for (const requiredNode of ['core (22)', 'core (24)']) {
-  const otherNode = requiredNode === 'core (22)' ? 'core (24)' : 'core (22)';
+for (const requiredNode of ['core (24)']) {
+  const otherNode = 'core (22)'; // A retired result cannot replace or hide the supported job's result.
   for (const checks of [
     [{ name: requiredNode, bucket: 'pass' }, { name: requiredNode, bucket: 'fail' }],
     [{ name: requiredNode, bucket: 'fail' }, { name: requiredNode, bucket: 'pass' }],
@@ -269,8 +286,8 @@ for (const requiredNode of ['core (22)', 'core (24)']) {
   }
 }
 
-for (const requiredNode of ['core (22)', 'core (24)']) {
-  const otherNode = requiredNode === 'core (22)' ? 'core (24)' : 'core (22)';
+for (const requiredNode of ['core (24)']) {
+  const otherNode = 'core (22)'; // A retired result cannot replace or hide the supported job's result.
   for (const duplicateChecks of [
     [{ name: requiredNode, bucket: 'pass' }, { name: requiredNode, bucket: 'pending' }],
     [{ name: requiredNode, bucket: 'pending' }, { name: requiredNode, bucket: 'pass' }],
@@ -351,7 +368,8 @@ test('all GitHub adapter operations use the injected runner with their original 
       };
     }
     if (args[0] === 'api' && args[1] === 'repos/mike-north/microdelta/rules/branches/main?per_page=100') return [];
-    if (args[0] === 'pr') return [{ name: 'sample CI', bucket: 'pass' }];
+    if (args[0] === 'api' && args[1] === checkSuitesPath()) return checkSuites();
+    if (args[0] === 'api' && args[1] === checkRunsPath(1)) return checkPage(requiredRuns());
     if (args[0] === 'api' && args[1] === 'repos/mike-north/microdelta/issues/34/comments') {
       return { html_url: `${pullRequestUrl}#issuecomment-123` };
     }
@@ -412,7 +430,7 @@ test('all GitHub adapter operations use the injected runner with their original 
   try {
     assert.deepEqual(await api.readRepository(), { nameWithOwner: 'mike-north/microdelta', defaultBranch: 'main' });
     assert.deepEqual(await api.readProtection('main'), {
-      branch: 'main', requiresPullRequest: true, strict: true, enforceAdmins: true,
+      branch: 'main', requiresPullRequest: true, enforceAdmins: true,
       resolveConversations: true, requiredContexts: ['sample CI'], checkSources: { 'sample CI': 'github-actions' },
     });
     assert.deepEqual(await api.readPullRequest(prNumber), {
@@ -420,7 +438,7 @@ test('all GitHub adapter operations use the injected runner with their original 
       headRepositoryNameWithOwner: 'mike-north/microdelta', headRefOid: reviewedHead, url: pullRequestUrl, nodeId: 'PR_NODE', unresolvedThreads: 1,
       autoMergeEnabled: false, merged: false, isReleaseVersion: false,
     });
-    assert.deepEqual(await api.readRequiredChecks(prNumber), [{ name: 'sample CI', bucket: 'pass' }]);
+    assert.deepEqual(await api.readRequiredChecks(prNumber, reviewedHead), REQUIRED_BRANCH_CHECKS.map(name => ({ name, bucket: 'pass' })));
     assert.deepEqual(await api.readCopilotReviews(prNumber), {
       reviews: [
         { authorLogin: 'copilot-pull-request-reviewer[bot]', authorType: 'Bot', commitOid: reviewedHead, state: 'COMMENTED', submitted: true, submittedAt: '2026-09-27T00:00:00Z', errored: true },
@@ -452,18 +470,19 @@ test('all GitHub adapter operations use the injected runner with their original 
   assert.deepEqual(calls[3].args.slice(0, 3), ['api', 'graphql', '-f']);
   assert.ok(calls[3].args.includes('after=null'));
   assert.ok(calls[4].args.includes('after=thread-cursor'));
-  assert.deepEqual(calls[5], {
-    args: ['pr', 'checks', String(prNumber), '--repo', 'mike-north/microdelta', '--required', '--json', 'name,bucket'],
-    acceptedExitCodes: [0, 8],
+  assert.deepEqual(calls[5], { args: ['api', checkSuitesPath()], acceptedExitCodes: undefined });
+  assert.deepEqual(calls[6], {
+    args: ['api', checkRunsPath(1)],
+    acceptedExitCodes: undefined,
   });
   const graphCalls = calls.filter(call => call.args[0] === 'api' && call.args[1] === 'graphql');
   assert.equal(graphCalls.length, 7);
   assert.ok(graphCalls.some(call => call.args.includes('after=review-cursor')));
-  assert.deepEqual(calls[8], {
+  assert.deepEqual(calls[9], {
     args: ['api', 'repos/mike-north/microdelta/issues/34/comments', '-X', 'POST', '-f', 'body=Reviewed.'],
     acceptedExitCodes: undefined,
   });
-  assert.deepEqual(calls[9], {
+  assert.deepEqual(calls[10], {
     args: [
       'api', `repos/mike-north/microdelta/statuses/${reviewedHead}`, '-X', 'POST',
       '-f', `state=success`, '-f', `context=${REQUIRED_STATUS_CONTEXT}`,
@@ -471,7 +490,7 @@ test('all GitHub adapter operations use the injected runner with their original 
     ],
     acceptedExitCodes: undefined,
   });
-  assert.deepEqual(calls[10], {
+  assert.deepEqual(calls[11], {
     args: ['api', `repos/mike-north/microdelta/commits/${reviewedHead}/status`],
     acceptedExitCodes: undefined,
   });
@@ -491,7 +510,8 @@ const REPO_PREFIX = 'repos/mike-north/microdelta';
 const LEGACY_PATH = `${REPO_PREFIX}/branches/main/protection`;
 const RULES_PATH = `${REPO_PREFIX}/rules/branches/main?per_page=100`;
 
-/** Rule payloads shaped like the rules-for-branch response: type, parameters, and owning ruleset. */
+/** Model branch-rule payloads with their type, parameters, and owning ruleset.
+ * Required status checks do not make latest-main freshness part of the accepted contract. */
 function rulesetRules({ rulesetId = RULESET_ID, pullRequest = {}, checks = {}, omit = [], contexts } = {}) {
   const requiredContexts = contexts ?? [
     ...REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: 15368 })),
@@ -503,7 +523,7 @@ function rulesetRules({ rulesetId = RULESET_ID, pullRequest = {}, checks = {}, o
     {
       type: 'required_status_checks',
       ruleset_id: rulesetId,
-      parameters: { strict_required_status_checks_policy: true, required_status_checks: requiredContexts, ...checks },
+      parameters: { strict_required_status_checks_policy: false, required_status_checks: requiredContexts, ...checks },
     },
     {
       type: 'pull_request',
@@ -527,9 +547,15 @@ function protectionRunner({ legacy = 'not-protected', rules = rulesetRules(), ru
     if (args[1] === RULES_PATH) return rules;
     const detail = /rulesets\/(\d+)$/u.exec(args[1] ?? '');
     if (detail) {
-      const ruleset = { [RULESET_ID]: { enforcement: 'active', bypass_actors: [] }, ...rulesets }[detail[1]];
-      if (!ruleset) throw new Error('GitHub CLI failed: Not Found (HTTP 404)');
-      return ruleset;
+      const id = Number(detail[1]);
+      const override = rulesets[id];
+      if (id !== RULESET_ID && !override) throw new Error('GitHub CLI failed: Not Found (HTTP 404)');
+      return {
+        enforcement: 'active',
+        bypass_actors: [],
+        rules: rules.filter(rule => rule.ruleset_id === id).map(({ type, parameters }) => ({ type, parameters })),
+        ...override,
+      };
     }
     throw new Error(`Unexpected GitHub command: ${args.join(' ')}`);
   };
@@ -545,7 +571,7 @@ const readRuleProtection = async fixtures => {
 const legacyProtection = {
   required_pull_request_reviews: {},
   required_status_checks: {
-    strict: true,
+    strict: false,
     contexts: [],
     checks: [
       ...REQUIRED_BRANCH_CHECKS.map(context => ({ context, app_id: 15368 })),
@@ -557,13 +583,129 @@ const legacyProtection = {
 };
 
 const alwaysBypass = { actor_id: 5, actor_type: 'RepositoryRole', bypass_mode: 'always' };
+const pullRequestBypass = { actor_id: 5, actor_type: 'RepositoryRole', bypass_mode: 'pull_request' };
+
+test('an administrator-only Supervisor review ruleset is accepted when ordinary protection is separately enforced', async () => {
+  const supervisorRulesetId = 25825587;
+  const rules = [
+    ...rulesetRules({ contexts: REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: 15368 })) })
+      .map(rule => ({ ...rule, ruleset_id: RULESET_ID })),
+    {
+      type: 'required_status_checks',
+      ruleset_id: supervisorRulesetId,
+      parameters: {
+        strict_required_status_checks_policy: false,
+        required_status_checks: [{ context: REQUIRED_STATUS_CONTEXT, integration_id: null }],
+      },
+    },
+  ];
+  const { protection } = await readRuleProtection({
+    rules,
+    rulesets: { [supervisorRulesetId]: { enforcement: 'active', bypass_actors: [alwaysBypass] } },
+  });
+  assert.equal(protection.enforceAdmins, true);
+  validateProtection(protection, 'main');
+});
+
+test('the owner can bypass only Supervisor review during pull requests under a dedicated ruleset', async () => {
+  const supervisorRulesetId = 25825587;
+  const rules = [
+    ...rulesetRules({ contexts: REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: 15368 })) })
+      .map(rule => ({ ...rule, ruleset_id: RULESET_ID })),
+    {
+      type: 'required_status_checks',
+      ruleset_id: supervisorRulesetId,
+      parameters: {
+        strict_required_status_checks_policy: false,
+        required_status_checks: [{ context: REQUIRED_STATUS_CONTEXT, integration_id: null }],
+      },
+    },
+  ];
+  const { protection } = await readRuleProtection({
+    rules,
+    rulesets: { [supervisorRulesetId]: { enforcement: 'active', bypass_actors: [pullRequestBypass] } },
+  });
+  assert.deepEqual([...protection.requiredContexts].sort(), [...REQUIRED_BRANCH_CHECKS, REQUIRED_STATUS_CONTEXT].sort());
+  assert.equal(protection.enforceAdmins, true);
+  validateProtection(protection, 'main');
+});
+
+test('passing protected checks do not require the PR branch to include the latest main', async () => {
+  const supervisorRulesetId = 25825587;
+  const rules = [
+    ...rulesetRules({ checks: { strict_required_status_checks_policy: false }, contexts: REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: 15368 })) })
+      .map(rule => ({ ...rule, ruleset_id: RULESET_ID })),
+    {
+      type: 'required_status_checks',
+      ruleset_id: supervisorRulesetId,
+      parameters: {
+        strict_required_status_checks_policy: false,
+        required_status_checks: [{ context: REQUIRED_STATUS_CONTEXT, integration_id: null }],
+      },
+    },
+  ];
+  const { protection } = await readRuleProtection({
+    rules,
+    rulesets: { [supervisorRulesetId]: { enforcement: 'active', bypass_actors: [pullRequestBypass] } },
+  });
+  assert.equal(protection.enforceAdmins, true);
+  assert.deepEqual([...protection.requiredContexts].sort(), [...REQUIRED_BRANCH_CHECKS, REQUIRED_STATUS_CONTEXT].sort());
+  assert.doesNotThrow(() => validateProtection(protection, 'main'));
+});
+
+test('a bypass source is rejected when its fetched full ruleset hides another protection outside the branch slice', async () => {
+  const supervisorRulesetId = 25825587;
+  const rules = [
+    ...rulesetRules({ contexts: REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: 15368 })) })
+      .map(rule => ({ ...rule, ruleset_id: RULESET_ID })),
+    {
+      type: 'required_status_checks',
+      ruleset_id: supervisorRulesetId,
+      parameters: { required_status_checks: [{ context: REQUIRED_STATUS_CONTEXT, integration_id: null }] },
+    },
+  ];
+  const { protection } = await readRuleProtection({
+    rules,
+    rulesets: {
+      [supervisorRulesetId]: {
+        enforcement: 'active',
+        bypass_actors: [alwaysBypass],
+        rules: [
+          { type: 'required_status_checks', parameters: { required_status_checks: [{ context: REQUIRED_STATUS_CONTEXT, integration_id: null }] } },
+          { type: 'deletion' },
+        ],
+      },
+    },
+  });
+  assert.throws(() => validateProtection(protection, 'main'), /does not apply to administrators/u);
+});
+
+test('legacy administrator enforcement cannot be masked by an owner-bypass-only Supervisor ruleset', async () => {
+  const supervisorRulesetId = 25825587;
+  const rules = [
+    {
+      type: 'required_status_checks',
+      ruleset_id: supervisorRulesetId,
+      parameters: { strict_required_status_checks_policy: false, required_status_checks: [{ context: REQUIRED_STATUS_CONTEXT, integration_id: null }] },
+    },
+  ];
+  const { protection } = await readRuleProtection({
+    legacy: {
+      ...legacyProtection,
+      required_status_checks: { ...legacyProtection.required_status_checks, strict: true },
+      enforce_admins: { enabled: false },
+    },
+    rules,
+    rulesets: { [supervisorRulesetId]: { enforcement: 'active', bypass_actors: [alwaysBypass] } },
+  });
+  assert.throws(() => validateProtection(protection, 'main'), /does not apply to administrators/u);
+});
 
 test('ruleset 24154977 alone yields a protection object that passes validateProtection', async () => {
   const { protection, calls } = await readRuleProtection();
   assert.equal(protection.branch, 'main');
   assert.equal(protection.requiresPullRequest, true); // pull_request rule present
   assert.equal(protection.resolveConversations, true); // required_review_thread_resolution: true
-  assert.equal(protection.strict, true); // strict_required_status_checks_policy: true
   assert.equal(protection.enforceAdmins, true); // active ruleset, no bypass actors
   assert.deepEqual([...protection.requiredContexts].sort(), [...REQUIRED_BRANCH_CHECKS, REQUIRED_STATUS_CONTEXT].sort());
   assert.deepEqual(protection.checkSources, {
@@ -587,12 +729,11 @@ test('legacy protection alone still produces the previously normalized object', 
 });
 
 test('a requirement is satisfied when either legacy protection or a ruleset enforces it', async () => {
-  const legacyWithoutStrict = { ...legacyProtection, required_status_checks: { ...legacyProtection.required_status_checks, strict: false } };
+  const legacyWithoutStrictness = { ...legacyProtection, required_status_checks: { ...legacyProtection.required_status_checks, strict: false } };
   const { protection } = await readRuleProtection({
-    legacy: legacyWithoutStrict,
+    legacy: legacyWithoutStrictness,
     rules: rulesetRules({ omit: ['pull_request'], checks: { required_status_checks: [] } }),
   });
-  assert.equal(protection.strict, true); // ruleset supplies strict
   assert.equal(protection.requiresPullRequest, true); // legacy supplies PRs
   validateProtection(protection, 'main');
 });
@@ -649,6 +790,43 @@ for (const [name, fixtures, expected] of [
   ['a disabled ruleset', { rulesets: { [RULESET_ID]: { enforcement: 'disabled', bypass_actors: [] } } }, /does not require pull requests/u],
   ['a bypass actor', { rulesets: { [RULESET_ID]: { enforcement: 'active', bypass_actors: [alwaysBypass] } } }, /does not apply to administrators/u],
   ['a pull-request-only bypass actor', { rulesets: { [RULESET_ID]: { enforcement: 'active', bypass_actors: [{ ...alwaysBypass, bypass_mode: 'pull_request' }] } } }, /does not apply to administrators/u],
+  ['an unsupported bypass mode on a Supervisor-only ruleset', {
+    rules: [
+      ...rulesetRules({ contexts: REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: 15368 })) }).map(rule => ({ ...rule, ruleset_id: RULESET_ID })),
+      { type: 'required_status_checks', ruleset_id: 99, parameters: { required_status_checks: [{ context: REQUIRED_STATUS_CONTEXT, integration_id: null }] } },
+    ],
+    rulesets: { 99: { enforcement: 'active', bypass_actors: [{ ...alwaysBypass, bypass_mode: 'unknown' }] } },
+  }, /does not apply to administrators/u],
+  ['a user bypass actor on a Supervisor-only ruleset', {
+    rules: [
+      ...rulesetRules().map(rule => ({ ...rule, ruleset_id: RULESET_ID })),
+      { type: 'required_status_checks', ruleset_id: 99, parameters: { required_status_checks: [{ context: REQUIRED_STATUS_CONTEXT, integration_id: null }] } },
+    ],
+    rulesets: { 99: { enforcement: 'active', bypass_actors: [{ actor_id: 5, actor_type: 'User', bypass_mode: 'always' }] } },
+  }, /does not apply to administrators/u],
+  ['a different repository role bypass actor on a Supervisor-only ruleset', {
+    rules: [
+      ...rulesetRules().map(rule => ({ ...rule, ruleset_id: RULESET_ID })),
+      { type: 'required_status_checks', ruleset_id: 99, parameters: { required_status_checks: [{ context: REQUIRED_STATUS_CONTEXT, integration_id: null }] } },
+    ],
+    rulesets: { 99: { enforcement: 'active', bypass_actors: [{ ...alwaysBypass, actor_id: 4 }] } },
+  }, /does not apply to administrators/u],
+  ['an administrator bypass on a ruleset that also protects CI', {
+    rules: [
+      ...rulesetRules().map(rule => ({ ...rule, ruleset_id: RULESET_ID })),
+      { type: 'required_status_checks', ruleset_id: 99, parameters: { required_status_checks: [
+        { context: REQUIRED_STATUS_CONTEXT, integration_id: null }, { context: 'core (24)', integration_id: 15368 },
+      ] } },
+    ],
+    rulesets: { 99: { enforcement: 'active', bypass_actors: [alwaysBypass] } },
+  }, /does not apply to administrators/u],
+  ['an inactive Supervisor-only ruleset', {
+    rules: [
+      ...rulesetRules({ contexts: REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: 15368 })) }).map(rule => ({ ...rule, ruleset_id: RULESET_ID })),
+      { type: 'required_status_checks', ruleset_id: 99, parameters: { required_status_checks: [{ context: REQUIRED_STATUS_CONTEXT, integration_id: null }] } },
+    ],
+    rulesets: { 99: { enforcement: 'evaluate', bypass_actors: [alwaysBypass] } },
+  }, /missing required checks: Supervisor review/u],
   ['a second contributing ruleset with a bypass actor', {
     rules: [...rulesetRules(), { type: 'deletion', ruleset_id: 99 }],
     rulesets: { 99: { enforcement: 'active', bypass_actors: [alwaysBypass] } },
@@ -657,23 +835,18 @@ for (const [name, fixtures, expected] of [
     { context: 'PR metadata', integration_id: 15368 },
     { context: 'core (22)', integration_id: 15368 }, { context: REQUIRED_STATUS_CONTEXT, integration_id: null },
   ] }) }, /missing required checks: core \(24\)/u],
-  ['a missing Node 22 context', { rules: rulesetRules({ contexts: [
-    { context: 'PR metadata', integration_id: 15368 },
-    { context: 'core (24)', integration_id: 15368 }, { context: REQUIRED_STATUS_CONTEXT, integration_id: null },
-  ] }) }, /missing required checks: core \(22\)/u],
   ['a missing Supervisor review context', { rules: rulesetRules({ contexts: REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: 15368 })) }) }, /missing required checks: Supervisor review/u],
   ['an Actions context without the Actions integration', { rules: rulesetRules({ contexts: [
-    ...REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: context === 'core (22)' ? null : 15368 })),
+    ...REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: context === 'core (24)' ? null : 15368 })),
     { context: REQUIRED_STATUS_CONTEXT, integration_id: null },
-  ] }) }, /source restriction is missing for: core \(22\)/u],
+  ] }) }, /source restriction is missing for: core \(24\)/u],
   ['an Actions context pinned to a different app', { rules: rulesetRules({ contexts: [
     ...REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: context === 'PR metadata' ? 123 : 15368 })),
     { context: REQUIRED_STATUS_CONTEXT, integration_id: null },
   ] }) }, /source restriction is missing for: PR metadata/u],
   ['a missing pull_request rule', { rules: rulesetRules({ omit: ['pull_request'] }) }, /does not require pull requests/u],
   ['a missing thread-resolution requirement', { rules: rulesetRules({ pullRequest: { required_review_thread_resolution: false } }) }, /does not require resolved conversations/u],
-  ['a non-strict status policy', { rules: rulesetRules({ checks: { strict_required_status_checks_policy: false } }) }, /does not require an up-to-date base/u],
-  ['a missing required_status_checks rule', { rules: rulesetRules({ omit: ['required_status_checks'] }) }, /does not require an up-to-date base/u],
+  ['a missing required_status_checks rule', { rules: rulesetRules({ omit: ['required_status_checks'] }) }, /missing required checks: PR metadata/u],
 ]) {
   test(`ruleset protection fails validation with a specific message for ${name}`, async () => {
     const { protection } = await readRuleProtection(fixtures);
@@ -690,4 +863,181 @@ test('ruleset-derived protection blocks runSupervisorReview before any write whe
   api.readProtection = branch => ruleApi.readProtection(branch);
   await assert.rejects(runSupervisorReview(request, api), /does not apply to administrators/u);
   assert.equal(calls.some(([call]) => ['createReviewRecord', 'setCommitStatus', 'enableAutoMerge'].includes(call)), false);
+});
+
+/** REST fixtures bind CI evidence to the repository's exact commit and Actions producer. */
+function checkRun(name, id, overrides = {}) {
+  return { id, name, url: `https://api.github.com/repos/mike-north/microdelta/check-runs/${id}`, head_sha: reviewedHead, app: { id: 15368, slug: 'github-actions' },
+    status: 'completed', conclusion: 'success', ...overrides };
+}
+
+/** All independently required contexts must be present even when the rollup is unavailable. */
+function requiredRuns() { return REQUIRED_BRANCH_CHECKS.map((name, index) => checkRun(name, index + 1)); }
+
+/** GitHub selects latest attempts; every returned duplicate still matters. */
+function checkRunsPath(page) { return `repos/mike-north/microdelta/commits/${reviewedHead}/check-runs?filter=latest&per_page=100&page=${page}`; }
+
+/** GitHub's count is the completeness witness for the selected latest-run pages. */
+function checkPage(check_runs, total_count = check_runs.length) { return { total_count, check_runs }; }
+
+/** Unexpected operations fail: readback must never need a status rollup or a mutation. */
+function checksApi(pages, calls = []) {
+  return createGitHubApi('mike-north/microdelta', args => {
+    calls.push(args);
+    const page = args[0] === 'api' ? (Object.hasOwn(pages, args[1]) ? pages[args[1]] : args[1] === checkSuitesPath() ? checkSuites() : undefined) : undefined;
+    if (page === undefined) throw new Error('statusCheckRollup is null; no checks reported');
+    if (page instanceof Error) throw page;
+    return page;
+  });
+}
+
+test('canonical exact-head check runs work when GraphQL statusCheckRollup is null', async () => {
+  const calls = [];
+  const rows = await checksApi({ [checkRunsPath(1)]: checkPage(requiredRuns()) }, calls).readRequiredChecks(prNumber, reviewedHead);
+  assert.deepEqual(rows, REQUIRED_BRANCH_CHECKS.map(name => ({ name, bucket: 'pass' })));
+  assert.deepEqual(calls, [['api', checkSuitesPath()], ['api', checkRunsPath(1)]]);
+});
+
+for (const [label, status, conclusion, bucket] of [
+  ['success', 'completed', 'success', 'pass'],
+  ['skipped', 'completed', 'skipped', 'skipping'],
+  ['neutral', 'completed', 'neutral', 'skipping'],
+  ['failure', 'completed', 'failure', 'fail'],
+  ['timeout', 'completed', 'timed_out', 'fail'],
+  ['action required', 'completed', 'action_required', 'fail'],
+  ['cancelled', 'completed', 'cancelled', 'cancel'],
+  ['stale', 'completed', 'stale', 'pending'],
+  ...['queued', 'in_progress', 'requested', 'waiting', 'pending'].map(status => [status, status, null, 'pending']),
+]) {
+  test(`canonical check runs preserve the ${label} bucket`, async () => {
+    const runs = requiredRuns();
+    runs[0] = { ...runs[0], status, conclusion };
+    const checks = await checksApi({ [checkRunsPath(1)]: checkPage(runs) }).readRequiredChecks(prNumber, reviewedHead);
+    assert.deepEqual(checks[0], { name: 'PR metadata', bucket });
+    if (bucket === 'fail' || bucket === 'cancel') assert.throws(() => validateChecks(checks), /non-passing/u);
+    else assert.equal(validateChecks(checks)[0].bucket, bucket);
+  });
+}
+
+for (const [label, replacement] of [
+  ['wrong repository', { url: 'https://api.github.com/repos/other/repository/check-runs/1' }],
+  ['wrong head', { head_sha: 'b'.repeat(40) }],
+  ['wrong app ID', { app: { id: 1, slug: 'github-actions' } }],
+  ['wrong app slug', { app: { id: 15368, slug: 'imposter' } }],
+  ['missing app', { app: null }],
+  ['missing head', { head_sha: undefined }],
+  ['missing run ID', { id: undefined }],
+  ['unrecognized status', { status: 'unknown' }],
+  ['unknown conclusion', { conclusion: 'unknown' }],
+  ['array conclusion', { conclusion: ['success'] }],
+  ['missing completed conclusion', { conclusion: null }],
+  ['conclusion before completion', { status: 'queued', conclusion: 'success' }],
+]) {
+  test(`canonical check runs fail closed for ${label}`, async () => {
+    const runs = requiredRuns(); runs[0] = { ...runs[0], ...replacement };
+    await assert.rejects(checksApi({ [checkRunsPath(1)]: checkPage(runs) }).readRequiredChecks(prNumber, reviewedHead), /check.run|Actions|head/iu);
+  });
+}
+
+for (const [label, response] of [
+  ['missing required context', checkPage(requiredRuns().slice(1))],
+  ['empty evidence', checkPage([])],
+  ['null response', null],
+  ['missing array', { total_count: 3 }],
+  ['missing count', { check_runs: requiredRuns() }],
+  ['invalid count', checkPage(requiredRuns(), -1)],
+  ['underreported count', checkPage(requiredRuns(), requiredRuns().length - 1)],
+  ['short incomplete page', checkPage(requiredRuns(), 4)],
+  ['malformed row', checkPage([null])],
+  ['duplicate run identity', checkPage([...requiredRuns(), requiredRuns()[0]])],
+  ['unavailable response', new Error('HTTP 503 unavailable')],
+]) {
+  test(`canonical check runs fail closed for ${label}`, async () => {
+    await assert.rejects(checksApi({ [checkRunsPath(1)]: response }).readRequiredChecks(prNumber, reviewedHead), /missing|malformed|incomplete|duplicate|503/iu);
+  });
+}
+
+test('check readback requires the caller expected head and fixed repository before a network read', async () => {
+  const calls = [];
+  const api = checksApi({}, calls);
+  for (const sha of [undefined, 'main', 'a'.repeat(39), '../other']) await assert.rejects(api.readRequiredChecks(prNumber, sha), /head/iu);
+  assert.deepEqual(calls, []);
+  await assert.rejects(createGitHubApi('someone/other', () => { throw new Error('network called'); }).readRequiredChecks(prNumber, reviewedHead), /only supports/u);
+});
+
+/** Required checks may occur on any page; unrelated named checks cannot satisfy them. */
+function fullFirstPage() { return Array.from({ length: 100 }, (_, index) => checkRun('unrelated', index + 100)); }
+
+test('canonical check readback completes pagination before returning required contexts', async () => {
+  const calls = [];
+  const total = 100 + requiredRuns().length;
+  const api = checksApi({ [checkRunsPath(1)]: checkPage(fullFirstPage(), total), [checkRunsPath(2)]: checkPage(requiredRuns(), total) }, calls);
+  assert.deepEqual(await api.readRequiredChecks(prNumber, reviewedHead), REQUIRED_BRANCH_CHECKS.map(name => ({ name, bucket: 'pass' })));
+  assert.deepEqual(calls, [['api', checkSuitesPath()], ['api', checkRunsPath(1)], ['api', checkRunsPath(2)]]);
+});
+
+for (const [label, secondPage] of [
+  ['missing later page', new Error('HTTP 503 unavailable')],
+  ['empty later page', checkPage([], 102)],
+  ['changed total', checkPage(requiredRuns(), 103)],
+  ['overlapping pages', checkPage([checkRun('unrelated', 100), ...requiredRuns().slice(1)], 102)],
+]) {
+  test(`canonical check pagination fails closed for ${label}`, async () => {
+    await assert.rejects(checksApi({ [checkRunsPath(1)]: checkPage(fullFirstPage(), 102), [checkRunsPath(2)]: secondPage }).readRequiredChecks(prNumber, reviewedHead), /incomplete|duplicate|503/iu);
+  });
+}
+
+for (const [label, status, conclusion, bucket] of [
+  ['pending', 'queued', null, 'pending'], ['failed', 'completed', 'failure', 'fail'],
+]) {
+  for (const reverse of [false, true]) {
+    test(`old success cannot conceal a newer ${label} duplicate in either response order (${reverse})`, async () => {
+      const runs = [...requiredRuns(), checkRun('PR metadata', 99, { status, conclusion })];
+      if (reverse) runs.reverse();
+      const checks = await checksApi({ [checkRunsPath(1)]: checkPage(runs) }).readRequiredChecks(prNumber, reviewedHead);
+      if (bucket === 'fail') assert.throws(() => validateChecks(checks), /non-passing/u);
+      else assert.equal(validateChecks(checks)[0].bucket, 'pending');
+    });
+  }
+}
+
+/** A count below GitHub's 1,000-suite cap makes the run listing's coverage usable. */
+function checkSuitesPath() { return `repos/mike-north/microdelta/commits/${reviewedHead}/check-suites?per_page=1`; }
+function checkSuites() { return { total_count: 1, check_suites: [{ head_sha: reviewedHead }] }; }
+
+for (const [label, suites] of [
+  ['suite limit reached', { ...checkSuites(), total_count: 1000 }],
+  ['suite limit exceeded', { ...checkSuites(), total_count: 1001 }],
+  ['missing suite count', { check_suites: [] }],
+  ['missing suite array', { total_count: 1 }],
+  ['negative suite count', { total_count: -1, check_suites: [] }],
+  ['empty suite sample', { total_count: 1, check_suites: [] }],
+  ['wrong-head suite sample', { total_count: 1, check_suites: [{ head_sha: 'b'.repeat(40) }] }],
+  ['unavailable suite evidence', new Error('HTTP 503 unavailable')],
+]) {
+  test(`check-run coverage fails closed for ${label}`, async () => {
+    const calls = [];
+    await assert.rejects(checksApi({ [checkSuitesPath()]: suites }, calls).readRequiredChecks(prNumber, reviewedHead), /incomplete|malformed|503/iu);
+    assert.deepEqual(calls, [['api', checkSuitesPath()]]);
+  });
+}
+
+test('a successful rerun selected by GitHub latest semantics is accepted without reading historical attempts', async () => {
+  const calls = [];
+  const runs = requiredRuns().map(run => ({ ...run, id: run.id + 100, url: run.url.replace(/\d+$/u, String(run.id + 100)) }));
+  const checks = await checksApi({ [checkRunsPath(1)]: checkPage(runs) }, calls).readRequiredChecks(prNumber, reviewedHead);
+  assert.deepEqual(validateChecks(checks), REQUIRED_BRANCH_CHECKS.map(name => ({ name, bucket: 'pass' })));
+  assert.ok(calls.every(args => !args[1].includes('filter=all')));
+});
+
+/** Retired CI cannot remain an accidental gate or substitute for the supported runtime's required result. */
+test('retired Node 22 is absent from required protection while metadata, Node 24 and supervisor status remain enforced', () => {
+  const { state } = scenario();
+  const protection = { ...state.protection, requiredContexts: ['PR metadata', 'core (24)', REQUIRED_STATUS_CONTEXT], checkSources: { 'PR metadata': 'github-actions', 'core (24)': 'github-actions' } };
+  assert.doesNotThrow(() => validateProtection(protection, 'main'));
+});
+
+test('canonical required-check readback accepts the Node 24-only protected Actions results', async () => {
+  const runs = [checkRun('PR metadata', 1), checkRun('core (24)', 2)];
+  assert.deepEqual(await checksApi({ [checkRunsPath(1)]: checkPage(runs) }).readRequiredChecks(prNumber, reviewedHead), [{ name: 'PR metadata', bucket: 'pass' }, { name: 'core (24)', bucket: 'pass' }]);
 });

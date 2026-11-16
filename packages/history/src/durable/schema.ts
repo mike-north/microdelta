@@ -27,6 +27,7 @@
 import type { ISqliteConnection, ISqliteRow } from '@microdelta/machine';
 
 import { HistorySchemaError } from './errors.js';
+import type { IHistoryReadPort } from './read-snapshot.js';
 
 /** Identity tag for embedded SQL; the text is passed through unchanged. */
 const sql = String.raw;
@@ -293,7 +294,7 @@ function objectName(statement: string): string {
 const expectedObjects: ReadonlyMap<string, string> = new Map(schemaObjects.map((statement) => [objectName(statement), normalize(statement)]));
 
 /** Every user-visible object currently in the database, keyed by name. */
-function presentObjects(connection: ISqliteConnection): ReadonlyMap<string, string | null> {
+function presentObjects(connection: IHistoryReadPort): ReadonlyMap<string, string | null> {
   const rows = connection.prepare(sql`/* schema */ SELECT name, sql FROM sqlite_master WHERE name NOT LIKE 'sqlite\_%' ESCAPE '\'`).all();
   return new Map(rows.map((row: ISqliteRow) => [String(row.name), typeof row.sql === 'string' ? normalize(row.sql) : null]));
 }
@@ -308,7 +309,7 @@ export function initializeSchema(connection: ISqliteConnection, logicalStore: st
   // An existing store is validated without taking the write lock; only an
   // apparently empty file enters the IMMEDIATE transaction, which rechecks.
   if (presentObjects(connection).size > 0) {
-    validateSchema(connection, logicalStore);
+    validateHistorySchema(connection, logicalStore);
     return;
   }
   connection.transaction(() => {
@@ -325,7 +326,7 @@ export function initializeSchema(connection: ISqliteConnection, logicalStore: st
       VALUES (1, 0, 0, 0, 0, 0)`).run();
     return undefined;
   });
-  validateSchema(connection, logicalStore);
+  validateHistorySchema(connection, logicalStore);
 }
 
 /**
@@ -334,16 +335,15 @@ export function initializeSchema(connection: ISqliteConnection, logicalStore: st
  * version rather than as an incomplete schema. A file whose identity cannot be
  * read this way is left to the exact object comparison.
  */
-function rejectOtherVersion(connection: ISqliteConnection, present: ReadonlyMap<string, string | null>): void {
-  if (!present.has('history_identity')) {
+function rejectOtherVersion(connection: IHistoryReadPort, present: ReadonlyMap<string, string | null>): void {
+  // An altered identity declaration is already structural incompatibility.
+  // Probe its version only when the supported columns are established by the
+  // declaration; a storage failure then remains a storage failure, never a
+  // reason to continue and invent a later schema diagnosis.
+  if (present.get('history_identity') !== expectedObjects.get('history_identity')) {
     return;
   }
-  let identities: readonly ISqliteRow[];
-  try {
-    identities = connection.prepare(sql`/* schema */ SELECT schema_name, schema_version FROM history_identity`).all();
-  } catch {
-    return;
-  }
+  const identities = connection.prepare(sql`/* schema */ SELECT schema_name, schema_version FROM history_identity`).all();
   const identity = identities[0];
   if (identities.length === 1 && identity?.schema_name === schemaName && identity.schema_version !== schemaVersion) {
     throw new HistorySchemaError(
@@ -352,8 +352,8 @@ function rejectOtherVersion(connection: ISqliteConnection, present: ReadonlyMap<
   }
 }
 
-/** Reject any database that is not exactly this schema for this logical store. */
-function validateSchema(connection: ISqliteConnection, logicalStore: string): void {
+/** Validate an existing schema and logical identity using read authority only. @internal */
+export function validateHistorySchema(connection: IHistoryReadPort, logicalStore: string): void {
   const present = presentObjects(connection);
   rejectOtherVersion(connection, present);
   const missing = [...expectedObjects.keys()].filter((name) => !present.has(name));

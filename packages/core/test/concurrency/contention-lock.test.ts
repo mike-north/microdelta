@@ -11,20 +11,43 @@ afterEach(() => {
 });
 
 test.each([
-  ['startup timeout', 'no-ready', /did not establish the SQLite write lock/u],
-  ['unexpected readiness message', 'unexpected-ready', /unexpected readiness/u],
-  ['early child exit', 'exit-before-ready', /ended before readiness/u],
-  ['release timeout', 'ignore-release', /did not release the SQLite write lock/u],
-] as const)('C3 lock helper reaps the child after %s', async (_label, scenario, diagnostic) => {
-  await expect(withIndependentWriteLock(freshStore(), async () => undefined, { scenario, timeoutMilliseconds: 100 }))
-    .rejects.toThrow(diagnostic);
+  { label: 'startup timeout', scenario: 'no-ready', diagnostic: /did not establish the SQLite write lock/u, startupTimeoutMilliseconds: 100 },
+  { label: 'unexpected readiness message', scenario: 'unexpected-ready', diagnostic: /unexpected readiness/u },
+  { label: 'early child exit', scenario: 'exit-before-ready', diagnostic: /ended before readiness/u },
+] as const)('C3 lock helper reaps the child after $label', async ({ scenario, diagnostic, startupTimeoutMilliseconds }) => {
+  await expect(withIndependentWriteLock(freshStore(), async () => undefined, {
+    scenario,
+    timeoutMilliseconds: 100,
+    ...(startupTimeoutMilliseconds === undefined ? {} : { startupTimeoutMilliseconds }),
+  })).rejects.toThrow(diagnostic);
+  expect(activeContentionLockCount()).toBe(0);
+});
+
+test('C3 lock helper reaches the intended readiness failure after delayed worker startup', async () => {
+  await expect(withIndependentWriteLock(freshStore(), async () => undefined, {
+    scenario: 'delayed-unexpected-ready',
+    timeoutMilliseconds: 100,
+  })).rejects.toThrow(/unexpected readiness/u);
+  expect(activeContentionLockCount()).toBe(0);
+});
+
+test('C3 lock helper reaches the callback before the release timeout and reaps its holder', async () => {
+  let callbackEntered = false;
+  await expect(withIndependentWriteLock(freshStore(), async () => {
+    callbackEntered = true;
+    return undefined;
+  }, { scenario: 'ignore-release', timeoutMilliseconds: 100 })).rejects.toThrow(/did not release the SQLite write lock/u);
+  expect(callbackEntered).toBe(true);
   expect(activeContentionLockCount()).toBe(0);
 });
 
 test('C3 lock cleanup preserves a callback failure while killing and reaping a holder that ignores release', async () => {
+  let callbackEntered = false;
   await expect(withIndependentWriteLock(freshStore(), async () => {
+    callbackEntered = true;
     throw new Error('original locked operation failure');
   }, { scenario: 'ignore-release', timeoutMilliseconds: 100 })).rejects.toThrow('original locked operation failure');
+  expect(callbackEntered).toBe(true);
   expect(activeContentionLockCount()).toBe(0);
 });
 
@@ -39,14 +62,16 @@ test.each([
 
 test('C3 lock cleanup preserves an undefined callback rejection when release times out', async () => {
   let didReject = false;
+  let callbackEntered = false;
   let reason: unknown;
   try {
-    await withIndependentWriteLock(freshStore(), async () => { throw undefined; }, { scenario: 'ignore-release', timeoutMilliseconds: 100 });
+    await withIndependentWriteLock(freshStore(), async () => { callbackEntered = true; throw undefined; }, { scenario: 'ignore-release', timeoutMilliseconds: 100 });
   } catch (error: unknown) {
     didReject = true;
     reason = error;
   }
   expect(didReject).toBe(true);
+  expect(callbackEntered).toBe(true);
   expect(reason).toBeUndefined();
   expect(activeContentionLockCount()).toBe(0);
 });

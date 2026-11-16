@@ -17,15 +17,35 @@ export const TARGET_REPOSITORY = 'mike-north/microdelta';
 /** These protected checks remain independent merge gates beside supervisor review. */
 export const REQUIRED_BRANCH_CHECKS = Object.freeze([
   'PR metadata',
-  'core (22)',
   'core (24)',
 ]);
 
 /** This required status is the exact-head review decision that resets on each commit. */
 export const REQUIRED_STATUS_CONTEXT = 'Supervisor review';
 
+/** The repository administrator may override only the standalone exact-head review status. */
+const OWNER_REVIEW_BYPASS_ACTOR = Object.freeze({ actor_id: 5, actor_type: 'RepositoryRole' });
+/** GitHub's pull-request-only mode is narrower than, and serves the same owner review purpose as, always mode. */
+const OWNER_REVIEW_BYPASS_MODES = new Set(['always', 'pull_request']);
+
 /** GitHub Actions owns the existing CI contexts; the supervisor status remains separate. */
 const REQUIRED_CHECK_SOURCE = 'github-actions';
+
+/** REST's largest page lets the count prove that no intermediate page was omitted. */
+const CHECK_RUNS_PAGE_SIZE = 100;
+
+/** GitHub's commit check-run endpoint considers at most this many check suites. */
+const CHECK_SUITES_LIMIT = 1000;
+
+/** Nonterminal REST states have the same pending meaning as the existing gh buckets. */
+const PENDING_CHECK_STATES = new Set(['queued', 'in_progress', 'requested', 'waiting', 'pending']);
+
+/** Keep the gh check bucket policy, including GitHub's stale conclusion as pending. */
+const COMPLETED_CHECK_BUCKETS = Object.freeze({
+  success: 'pass', skipped: 'skipping', neutral: 'skipping',
+  failure: 'fail', timed_out: 'fail', action_required: 'fail',
+  cancelled: 'cancel', stale: 'pending',
+});
 
 /** GitHub uses this application ID for the source-pinned Actions check producer. */
 const GITHUB_ACTIONS_APP_ID = 15368;
@@ -55,11 +75,10 @@ export function validateRequest(request) {
   }
 }
 
-/** Fail closed unless the current main-branch rule contains the complete review and CI gate. */
+/** Require review, administrator, conversation, and source-pinned CI gates; base freshness is not a merge condition. */
 export function validateProtection(protection, defaultBranch) {
   if (protection.branch !== defaultBranch) throw new Error('Protection readback did not match the repository default branch.');
   if (!protection.requiresPullRequest) throw new Error('Main branch protection does not require pull requests.');
-  if (!protection.strict) throw new Error('Main branch protection does not require an up-to-date base.');
   if (!protection.enforceAdmins) throw new Error('Main branch protection does not apply to administrators.');
   if (!protection.resolveConversations) throw new Error('Main branch protection does not require resolved conversations.');
 
@@ -212,19 +231,8 @@ export async function runSupervisorReview(request, api) {
     throw new Error('Pull request head changed during supervisor review.');
   }
 
-  await api.enableAutoMerge({
-    pullRequestNumber: request.pullRequestNumber,
-    expectedHeadOid: request.expectedHeadOid,
-  });
-
-  const outcomeBeforeApproval = await api.readOutcome(request.pullRequestNumber);
-  if (outcomeBeforeApproval.headRefOid !== request.expectedHeadOid) {
-    throw new Error('Pull request head changed at the auto-merge boundary.');
-  }
-  if (!outcomeBeforeApproval.autoMergeEnabled && !outcomeBeforeApproval.merged) {
-    throw new Error('GitHub did not confirm the auto-merge request.');
-  }
-
+  // Verify the exact-head decision before arming auto-merge; shared owner credentials must not
+  // let this agentic workflow rely on the repository owner's separate status bypass.
   const success = await api.setCommitStatus({
     sha: request.expectedHeadOid,
     context: REQUIRED_STATUS_CONTEXT,
@@ -241,10 +249,22 @@ export async function runSupervisorReview(request, api) {
     throw new Error('Supervisor status readback did not confirm success on the reviewed head.');
   }
 
+  // Status publication can race with a push, rule edit, or new review conversation; re-read every
+  // gate after the readback and before asking GitHub to merge this head.
+  const finalGates = await verifyCurrentState(request, api);
+  if (finalGates.pullRequest.headRefOid !== request.expectedHeadOid) {
+    throw new Error('Pull request head changed after supervisor status publication.');
+  }
+
+  await api.enableAutoMerge({
+    pullRequestNumber: request.pullRequestNumber,
+    expectedHeadOid: request.expectedHeadOid,
+  });
+
   const outcome = await api.readOutcome(request.pullRequestNumber);
   if (outcome.headRefOid !== request.expectedHeadOid) throw new Error('Pull request head changed after supervisor status publication.');
   if (!outcome.autoMergeEnabled && !outcome.merged) throw new Error('Auto-merge request is absent after supervisor status publication.');
-  const hasPendingChecks = REQUIRED_BRANCH_CHECKS.some(name => current.checks.find(check => check.name === name)?.bucket === 'pending');
+  const hasPendingChecks = REQUIRED_BRANCH_CHECKS.some(name => finalGates.checks.find(check => check.name === name)?.bucket === 'pending');
   return {
     expectedHeadOid: request.expectedHeadOid,
     reviewComment,
@@ -287,7 +307,6 @@ const RULES_PAGE_SIZE = 100;
 /** The absent-source shape: no requirement is enforced by a source that does not exist. */
 const NO_PROTECTION = Object.freeze({
   requiresPullRequest: false,
-  strict: false,
   enforceAdmins: false,
   resolveConversations: false,
   requiredContexts: Object.freeze([]),
@@ -307,13 +326,13 @@ function mergeCheckSources(...sourceMaps) {
   return merged;
 }
 
-/** Combine sources by union of enforced requirements; the branch name comes from the caller. */
+/** Combine requirements by union while requiring administrator coverage from every protection source. */
 function mergeProtections(branch, ...sources) {
   return {
     branch,
     requiresPullRequest: sources.some(source => source.requiresPullRequest),
-    strict: sources.some(source => source.strict),
-    enforceAdmins: sources.some(source => source.enforceAdmins),
+    enforceAdmins: sources.filter(source => source.contributesProtection).every(source => source.enforceAdmins)
+      && sources.some(source => source.contributesProtection),
     resolveConversations: sources.some(source => source.resolveConversations),
     requiredContexts: [...new Set(sources.flatMap(source => source.requiredContexts))],
     checkSources: mergeCheckSources(...sources.map(source => source.checkSources)),
@@ -332,8 +351,8 @@ function normalizeLegacyProtection(rule) {
   ]));
   return {
     requiresPullRequest: rule.required_pull_request_reviews != null,
-    strict: checks?.strict === true,
     enforceAdmins: rule.enforce_admins?.enabled === true,
+    contributesProtection: Object.keys(rule).some(key => key !== 'enforce_admins'),
     resolveConversations: rule.required_conversation_resolution?.enabled === true,
     requiredContexts: [...requiredContexts],
     checkSources,
@@ -341,36 +360,63 @@ function normalizeLegacyProtection(rule) {
 }
 
 /**
- * Normalize the rules GitHub reports as active for a branch, plus the owning rulesets' own
- * enforcement and bypass lists. Rules of a ruleset that is not `active` enforce nothing and are
- * ignored. Administrators are covered only when at least one ruleset contributes and every
- * contributing ruleset is active with no bypass actor of any kind.
+ * Normalize active branch rules together with each owning ruleset's enforcement and bypass list.
+ * A repository administrator may bypass only a ruleset that contributes exactly the standalone
+ * Supervisor review status; every ruleset with any other protection must cover administrators.
  */
 function normalizeRulesetProtection(rules, rulesetsById) {
   const protection = {
     requiresPullRequest: false,
-    strict: false,
     resolveConversations: false,
     requiredContexts: [],
     checkSources: {},
   };
+  const rulesByRuleset = new Map();
   for (const rule of rules) {
+    const ownedRules = rulesByRuleset.get(rule.ruleset_id) ?? [];
+    ownedRules.push(rule);
+    rulesByRuleset.set(rule.ruleset_id, ownedRules);
     if (rulesetsById.get(rule.ruleset_id).enforcement !== 'active') continue;
     if (rule.type === 'pull_request') {
       protection.requiresPullRequest = true;
       if (rule.parameters?.required_review_thread_resolution === true) protection.resolveConversations = true;
     } else if (rule.type === 'required_status_checks') {
-      if (rule.parameters?.strict_required_status_checks_policy === true) protection.strict = true;
       for (const check of rule.parameters?.required_status_checks ?? []) {
         protection.requiredContexts.push(check.context);
         protection.checkSources = mergeCheckSources(protection.checkSources, { [check.context]: checkSourceForApp(check.integration_id) });
       }
     }
   }
-  const contributing = [...rulesetsById.values()];
-  const enforceAdmins = contributing.length > 0
-    && contributing.every(ruleset => ruleset.enforcement === 'active' && (ruleset.bypass_actors ?? []).length === 0);
-  return { ...protection, enforceAdmins };
+  const contributors = [...rulesByRuleset].filter(([id]) => rulesetsById.get(id).enforcement === 'active').map(([id, ownedRules]) => {
+    const ruleset = rulesetsById.get(id);
+    const bypassActors = ruleset.bypass_actors;
+    /** Match both GitHub's branch slice and full ruleset detail, so hidden broader rules refuse the exception. */
+    const onlySupervisorStatus = candidateRules => Array.isArray(candidateRules)
+      && candidateRules.length === 1
+      && candidateRules[0].type === 'required_status_checks'
+      && candidateRules[0].parameters?.required_status_checks?.length === 1
+      && candidateRules[0].parameters.required_status_checks[0].context === REQUIRED_STATUS_CONTEXT
+      && candidateRules[0].parameters.required_status_checks[0].integration_id == null;
+    const branchOnly = onlySupervisorStatus(ownedRules);
+    const detailOnly = onlySupervisorStatus(ruleset.rules);
+    // Compare the raw policy field only to ensure both GitHub views describe the same rule;
+    // branch freshness is not a merge gate.
+    const sameStatusRule = branchOnly && detailOnly
+      && ownedRules[0].parameters.strict_required_status_checks_policy === ruleset.rules[0].parameters.strict_required_status_checks_policy
+      && ownedRules[0].parameters.required_status_checks[0].integration_id === ruleset.rules[0].parameters.required_status_checks[0].integration_id;
+    const ownerOverride = ruleset.enforcement === 'active'
+      && sameStatusRule
+      && Array.isArray(bypassActors)
+      && bypassActors.length === 1
+      && Object.keys(OWNER_REVIEW_BYPASS_ACTOR).every(key => bypassActors[0]?.[key] === OWNER_REVIEW_BYPASS_ACTOR[key])
+      && OWNER_REVIEW_BYPASS_MODES.has(bypassActors[0]?.bypass_mode);
+    const noBypass = Array.isArray(bypassActors) && bypassActors.length === 0;
+    return {
+      enforceAdmins: noBypass || ownerOverride,
+    };
+  });
+  const enforceAdmins = contributors.length > 0 && contributors.every(source => source.enforceAdmins);
+  return { ...protection, enforceAdmins, contributesProtection: contributors.length > 0 };
 }
 
 /**
@@ -463,11 +509,70 @@ export function createGitHubApi(repositoryName, runJson = ghJson) {
         isReleaseVersion: /^Version Packages/iu.test(pullRequest.title) || /^changeset-release\//iu.test(pullRequest.headRefName),
       };
     },
-    /** Read current required CI buckets while preserving gh's pending exit code as data. */
-    async readRequiredChecks(number) {
-      // gh pr checks uses exit code 8 for pending checks while still returning JSON.
-      const rows = runJson(['pr', 'checks', String(number), '--repo', repositoryName, '--required', '--json', 'name,bucket'], [0, 8]);
-      return rows.filter(row => row.name !== REQUIRED_STATUS_CONTEXT).map(row => ({ name: row.name, bucket: row.bucket }));
+    /**
+     * Read exact-commit Actions evidence without relying on GraphQL's status rollup.
+     * GitHub selects latest attempts; every returned duplicate context remains evidence,
+     * so a success never hides another current pending or failed run. No local timestamp
+     * ordering guesses which workflow/event owns a repeated name.
+     */
+    async readRequiredChecks(_number, expectedHeadOid) {
+      if (repositoryName !== TARGET_REPOSITORY) throw new Error(`This command only supports ${TARGET_REPOSITORY}.`);
+      if (typeof expectedHeadOid !== 'string' || !/^[0-9a-f]{40}$/u.test(expectedHeadOid)) {
+        throw new Error('Required check readback needs an exact full commit head OID.');
+      }
+      const commitPath = `${restPrefix}/commits/${expectedHeadOid}`;
+      // The runs endpoint silently considers only 1,000 suites. A smaller canonical
+      // suite count is required before its otherwise complete pages can prove coverage.
+      const suites = runJson(['api', `${commitPath}/check-suites?per_page=1`]);
+      if (!Number.isSafeInteger(suites?.total_count) || suites.total_count < 0
+        || !Array.isArray(suites.check_suites) || suites.check_suites.length !== Math.min(suites.total_count, 1)
+        || suites.check_suites.some(suite => suite?.head_sha !== expectedHeadOid)) {
+        throw new Error('GitHub returned malformed check-suite coverage for the expected head.');
+      }
+      if (suites.total_count >= CHECK_SUITES_LIMIT) throw new Error('Check-run evidence may be incomplete at GitHub’s check-suite limit.');
+
+      const checks = [];
+      const seenIds = new Set();
+      let total;
+      for (let pageNumber = 1; ; pageNumber += 1) {
+        const page = runJson(['api', `${commitPath}/check-runs?filter=latest&per_page=${CHECK_RUNS_PAGE_SIZE}&page=${pageNumber}`]);
+        if (!Number.isSafeInteger(page?.total_count) || page.total_count < 0 || !Array.isArray(page.check_runs)) {
+          throw new Error('GitHub returned malformed check-run evidence.');
+        }
+        total ??= page.total_count;
+        const expectedLength = Math.min(CHECK_RUNS_PAGE_SIZE, total - seenIds.size);
+        if (page.total_count !== total || page.check_runs.length !== expectedLength) {
+          throw new Error('GitHub returned incomplete or changing check-run pages.');
+        }
+        for (const run of page.check_runs) {
+          if (!Number.isSafeInteger(run?.id) || run.id < 1 || typeof run.name !== 'string' || run.name.length === 0) {
+            throw new Error('GitHub returned a malformed check-run identity.');
+          }
+          if (seenIds.has(run.id)) throw new Error('GitHub returned duplicate check-run identities across pages.');
+          seenIds.add(run.id);
+          if (run.head_sha !== expectedHeadOid) throw new Error('Check-run evidence belongs to a different head.');
+          if (!REQUIRED_BRANCH_CHECKS.includes(run.name)) continue;
+          if (run.url !== `https://api.github.com/${restPrefix}/check-runs/${run.id}`) {
+            throw new Error('Check-run evidence belongs to a different repository or has a malformed URL.');
+          }
+          if (run.app?.id !== GITHUB_ACTIONS_APP_ID || run.app.slug !== REQUIRED_CHECK_SOURCE) {
+            throw new Error('Required check-run evidence is not from GitHub Actions.');
+          }
+          let bucket;
+          if (run.status === 'completed' && typeof run.conclusion === 'string' && Object.hasOwn(COMPLETED_CHECK_BUCKETS, run.conclusion)) {
+            bucket = COMPLETED_CHECK_BUCKETS[run.conclusion];
+          } else if (PENDING_CHECK_STATES.has(run.status) && run.conclusion === null) {
+            bucket = 'pending';
+          } else {
+            throw new Error('GitHub returned a malformed or unsupported check-run state.');
+          }
+          checks.push({ name: run.name, bucket });
+        }
+        if (seenIds.size === total) break;
+      }
+      const missing = REQUIRED_BRANCH_CHECKS.filter(name => !checks.some(check => check.name === name));
+      if (missing.length > 0) throw new Error(`Required CI results are missing: ${missing.join(', ')}.`);
+      return checks;
     },
     /** Read submitted reviews and outstanding requests without confusing a request with a review. */
     async readCopilotReviews(number) {

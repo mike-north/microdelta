@@ -19,15 +19,18 @@
  *
  * `--check-anchors` verifies that every anchor matches exactly once in the
  * current builds and exits without running any suite; `npm test` runs it for
- * every runner (anchor-check.test.mjs) so drift fails early.
+ * every runner (anchor-check.test.mjs) so drift fails early. `--only <text>`
+ * runs one uniquely named control for diagnosis; it is not the full evidence
+ * run.
  */
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-import { anchorCheckRequested, anchorProblems, reportAnchorCheck } from '../../durable-history/controls/anchor-check.mjs';
+import { anchorProblems, reportAnchorCheck } from '../../durable-history/controls/anchor-check.mjs';
 import { judgeRun } from '../../durable-history/controls/control-outcome.mjs';
+import { selectOperationControls } from './select-control.mjs';
 
 const root = new URL('../../../../../', import.meta.url).pathname;
 const core = join(root, 'packages/core');
@@ -77,8 +80,8 @@ const controls = [
   {
     name: 'an unknown outcome is reported as zero usage',
     directory: supervision, file: 'operation-engine.js',
-    anchor: "const unknown = settledAs('unknown', 'unknown');",
-    replacement: "ports.accounting.acknowledgeUsage({ environment: context.environment, operation, requestAttempt, report: 'provider:zero', quantities: [] }); const unknown = settledAs('unknown', 'unknown');",
+    anchor: 'const outcome = retryOutcome(response);',
+    replacement: "if (response.kind === 'unknown') { ports.accounting.acknowledgeUsage({ environment: context.environment, operation, requestAttempt, report: 'provider:zero', quantities: [] }); } const outcome = retryOutcome(response);",
   },
   {
     name: 'operation events carry the request binding',
@@ -161,8 +164,8 @@ const controls = [
     name: 'a woken pass with a deadline fails busy at once instead of waiting up to the deadline',
     directory: supervision, file: 'supervision.js',
     edits: [
-      { anchor: 'function leaseForPass() {\n            return writerLease();\n        }', replacement: "function leaseForPass(number) {\n            if (number > 1 && writerPolicy.deadline !== undefined) {\n                const attempt = writer.tryLease();\n                if (attempt.kind !== 'acquired') {\n                    throw new SupervisionError('writer-busy', 'woken pass gave up');\n                }\n                return Promise.resolve(attempt.lease);\n            }\n            return writerLease();\n        }" },
-      { anchor: 'lease = await leaseForPass();', replacement: 'lease = await leaseForPass(number);' },
+      { anchor: "function leaseForPass(observeStop) {\n                return writerLease(observeStop);\n            }", replacement: "function leaseForPass(number, observeStop) {\n                if (number > 1 && writerPolicy.deadline !== undefined) {\n                    const attempt = writer.tryLease();\n                    if (attempt.kind !== 'acquired') {\n                        throw new SupervisionError('writer-busy', 'woken pass gave up');\n                    }\n                    return Promise.resolve(attempt.lease);\n                }\n                return writerLease(observeStop);\n            }" },
+      { anchor: "lease = await leaseForPass(number === 1 ? request.firstLeaseStopped : undefined);", replacement: "lease = await leaseForPass(number, number === 1 ? request.firstLeaseStopped : undefined);" },
     ],
   },
   {
@@ -170,8 +173,8 @@ const controls = [
     name: 'a woken pass without a deadline returns waiting instead of waiting for the lease',
     directory: supervision, file: 'supervision.js',
     edits: [
-      { anchor: 'function leaseForPass() {\n            return writerLease();\n        }', replacement: "function leaseForPass(number) {\n            if (number > 1 && writerPolicy.deadline === undefined) {\n                const attempt = writer.tryLease();\n                return Promise.resolve(attempt.kind === 'acquired' ? attempt.lease : undefined);\n            }\n            return writerLease();\n        }" },
-      { anchor: 'lease = await leaseForPass();', replacement: "lease = await leaseForPass(number);\n                    if (lease === undefined) {\n                        return previous;\n                    }" },
+      { anchor: "function leaseForPass(observeStop) {\n                return writerLease(observeStop);\n            }", replacement: "function leaseForPass(number, observeStop) {\n                if (number > 1 && writerPolicy.deadline === undefined) {\n                    const attempt = writer.tryLease();\n                    return Promise.resolve(attempt.kind === 'acquired' ? attempt.lease : undefined);\n                }\n                return writerLease(observeStop);\n            }" },
+      { anchor: "lease = await leaseForPass(number === 1 ? request.firstLeaseStopped : undefined);", replacement: "lease = await leaseForPass(number, number === 1 ? request.firstLeaseStopped : undefined);\n                    if (lease === undefined) {\n                        return previous;\n                    }" },
     ],
   },
   {
@@ -252,8 +255,8 @@ const controls = [
     // The original race: a stop already in force ran the listener before `cancel` was assigned, so the timer stayed armed.
     name: 'a stop that lands as the deferral sleep begins still arms its keep-alive timer',
     directory: supervision, file: 'supervision.js',
-    anchor: "if (state.stopped.signal.aborted) {\n                return Promise.resolve(false);\n            }\n            return new Promise((resolve) => {\n                let remove = () => undefined;\n                const cancel = clock.schedule(until, () => {\n                    remove();\n                    resolve(true);\n                }, { keepAlive: true });\n                remove = state.stopped.signal.onAbort(() => {\n                    cancel();\n                    resolve(false);\n                });\n            });",
-    replacement: "return new Promise((resolve) => {\n                let cancel = () => undefined;\n                const remove = state.stopped.signal.onAbort(() => {\n                    cancel();\n                    resolve(false);\n                });\n                cancel = clock.schedule(until, () => {\n                    remove();\n                    resolve(true);\n                }, { keepAlive: true });\n            });",
+    anchor: "if (state.stopped.signal.aborted) {\n                    return Promise.resolve(false);\n                }\n                return new Promise((resolve) => {\n                    let remove = () => undefined;\n                    const cancel = clock.schedule(until, () => {\n                        remove();\n                        resolve(true);\n                    }, { keepAlive: true });\n                    remove = state.stopped.signal.onAbort(() => {\n                        cancel();\n                        resolve(false);\n                    });\n                });",
+    replacement: "return new Promise((resolve) => {\n                    let cancel = () => undefined;\n                    const remove = state.stopped.signal.onAbort(() => {\n                        cancel();\n                        resolve(false);\n                    });\n                    cancel = clock.schedule(until, () => {\n                        remove();\n                        resolve(true);\n                    }, { keepAlive: true });\n                });",
   },
   {
     name: 'the resumed wait event reports the lease kept',
@@ -263,7 +266,7 @@ const controls = [
   {
     name: 'a release made while a request sleeps is not recorded for its wait',
     directory: supervision, file: 'supervision.js',
-    anchor: 'for (const sleeper of sleepers) {\n                    sleeper.released = true;\n                }', replacement: 'void sleepers;',
+    anchor: 'for (const sleeper of sleepers) {\n                        sleeper.released = true;\n                    }', replacement: 'void sleepers;',
   },
   {
     name: "a body failure's message repeats the author's error text",
@@ -292,11 +295,14 @@ const controls = [
   },
 ];
 
+/** Resolve diagnostic selection before any emitted build is read or changed. */
+const selection = selectOperationControls(process.argv.slice(2), controls);
+
 /** Emitted files a control may plant into, with their original bytes. */
 const originals = new Map([...new Set(controls.map((control) => join(control.directory, control.file)))].map((path) => [path, readFileSync(path, 'utf8')]));
 
 // Drift guard: `--check-anchors` verifies every anchor against the current builds and runs no suite.
-if (anchorCheckRequested()) {
+if (selection.checkAnchors) {
   const plants = controls.flatMap((control) => {
     const path = join(control.directory, control.file);
     return (control.edits ?? [{ anchor: control.anchor }]).map((edit) => ({ control: control.name, file: path, text: originals.get(path), anchor: edit.anchor }));
@@ -356,7 +362,7 @@ try {
   if (baseline.failed.length > 0) {
     throw new Error('the unmodified build must pass every test before controls run');
   }
-  for (const control of controls) {
+  for (const control of selection.selected) {
     const path = join(control.directory, control.file);
     const original = originals.get(path);
     // A control plants one edit, or several edits that together remove one behavior.
@@ -395,5 +401,5 @@ for (const [path, content] of originals) {
     failures += 1;
   }
 }
-console.log(`\n${failures === 0 ? 'PASS' : 'FAIL'}: ${String(controls.length)} controls`);
+console.log(`\n${failures === 0 ? 'PASS' : 'FAIL'}: ${String(selection.selected.length)} controls${selection.only === undefined ? '' : ` (limited to "${selection.only}")`}`);
 process.exit(failures > 0 ? 1 : 0);

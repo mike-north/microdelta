@@ -1,0 +1,64 @@
+{
+  "purpose": "Pure-file regression fixture copied exactly from the first native AUTHOR result. No native fixture generation, reconstruction or new SQL execution.",
+  "authorPacketSha256": "61ae397d76f9fbb621a75e2fde7271a60713977e86d64f9c7d02655e15bc92f2",
+  "invocationManifestCanonicalDigest": "daa4f77bb47f5402512d160f93ad29edebdd02c09ad365151f9c3643d165f707",
+  "originalVerdict": "INCONCLUSIVE",
+  "beforeLabel": "R.exit",
+  "afterLabel": "R2.exit",
+  "files": [
+    {
+      "name": "image-10.json",
+      "bytes": 532,
+      "sha256": "3f5aa326fe57a71acb4d6e12d0081ecbb83179451056c502e93cbf049544721b",
+      "source": "/private/tmp/issue302-native-author-handoff/raw-evidence/proof/Q2/image-10.json"
+    },
+    {
+      "name": "image-11.json",
+      "bytes": 614,
+      "sha256": "211c239ccfd27b54e872ead739f9caaa57e5a9a2aecb4243294c57b2414d81c8",
+      "source": "/private/tmp/issue302-native-author-handoff/raw-evidence/proof/Q2/image-11.json"
+    },
+    {
+      "name": "result.json",
+      "bytes": 41859,
+      "sha256": "957bc978dfcb97d00163d496722ad84e2adb295d216908f55bcf48fb6ea15913",
+      "source": "/private/tmp/issue302-native-author-handoff/raw-evidence/proof/Q2/result.json"
+    },
+    {
+      "name": "image-10-store.sqlite",
+      "bytes": 12288,
+      "sha256": "7505444dcc2e890e7b4597a88719f30568cfb2d8cfdc9365a2591f8956c87d5d",
+      "source": "/private/tmp/issue302-native-author-handoff/raw-evidence/proof/Q2/image-10-store.sqlite"
+    },
+    {
+      "name": "image-10-store.sqlite-wal",
+      "bytes": 16512,
+      "sha256": "52f0e32b1d2ae53eff96599c78a6d3c8692e0f54ad57a2245f6917b5fdb0230d",
+      "source": "/private/tmp/issue302-native-author-handoff/raw-evidence/proof/Q2/image-10-store.sqlite-wal"
+    },
+    {
+      "name": "image-10-store.sqlite-shm",
+      "bytes": 32768,
+      "sha256": "91bf3341fc1cb5d5297c348bcd50983951c1e26594e2c07ed9affacbef97d6ae",
+      "source": "/private/tmp/issue302-native-author-handoff/raw-evidence/proof/Q2/image-10-store.sqlite-shm"
+    },
+    {
+      "name": "image-11-store.sqlite",
+      "bytes": 12288,
+      "sha256": "7505444dcc2e890e7b4597a88719f30568cfb2d8cfdc9365a2591f8956c87d5d",
+      "source": "/private/tmp/issue302-native-author-handoff/raw-evidence/proof/Q2/image-11-store.sqlite"
+    },
+    {
+      "name": "image-11-store.sqlite-wal",
+      "bytes": 16512,
+      "sha256": "52f0e32b1d2ae53eff96599c78a6d3c8692e0f54ad57a2245f6917b5fdb0230d",
+      "source": "/private/tmp/issue302-native-author-handoff/raw-evidence/proof/Q2/image-11-store.sqlite-wal"
+    },
+    {
+      "name": "image-11-store.sqlite-shm",
+      "bytes": 32768,
+      "sha256": "41e2982cd728bcc6356975b6c0ff80754bb1158c69b72aedd9652d1ad8c132a4",
+      "source": "/private/tmp/issue302-native-author-handoff/raw-evidence/proof/Q2/image-11-store.sqlite-shm"
+    }
+  ]
+}

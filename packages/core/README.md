@@ -20,6 +20,46 @@ describes how the project-private Node SQLite workspace canonicalizes existing
 store paths and why distinct hard-linked names must not be used concurrently
 for one WAL database. This does not change the public memory `Store` API.
 
+## Finite execution observation
+
+The package installs the `microdelta` executable. Read one exact execution with
+its caller-retained observation locator:
+
+```sh
+microdelta observe --location /path/to/observation.sqlite --execution-id 0123456789abcdef0123456789abcdef
+```
+
+Each invocation emits exactly one version-1 JSON document and releases its reader.
+Use the existing `workspace.startObserved` alpha library path to obtain a locator.
+The command reads the dedicated observation artifact through the existing finite
+read-only boundary; it takes no workload module or History/Accounting store.
+
+Exit status is **0** when the result is `observed`, including a record describing
+an execution failure; **1** for `absent`, `identity-mismatch`, `unsupported`,
+`corrupt`, `busy`, `unavailable` or `recovery-required`; and **2** for invalid or
+incomplete arguments, with a usage diagnostic only on stderr. The JSON result
+supplies each read-refusal reason. A sampled nonterminal record is neither a
+heartbeat nor proof of process liveness, and event counters are not completion
+percentages. The command performs one read rather than waiting for completion.
+The finite reader is the separately permissionable read side of the accepted
+bounded CLI slice; full CLI-001–004 inspection and M6 remain open.
+
+## Foreground run-start
+
+The installed `microdelta` executable also starts one caller-prepared foreground
+run:
+
+```sh
+microdelta start --module ./dist/workload.js --observation ./observations/run.sqlite -- opaque-app-arg
+```
+
+The module preparation contract, receipts, and limits are documented in the
+[private-alpha consumer guide](../../docs/private-alpha-workspace-consumers.md).
+The controlled installed-command proof is based on locally built repository
+packages; it does not establish a new npm publication or make alpha declarations
+part of the published package surface. The bounded run-start and finite reader
+do not complete full CLI-001–004 inspection, M6, or M7.
+
 ## Project-private workspace path (alpha)
 
 External pnpm ESM consumers evaluating the published `microdelta@0.2.0`
@@ -41,7 +81,9 @@ composes the owners and adds no policy of its own:
   key and tracked gate; member steps read their member through the `member`
   binding), `fold` (a strict fold over one template step), `outcomeFold` (an
   outcome fold over every member's settled status), `stepSlot`,
-  `suppliedStep` and `supply` (callable step slots bound at composition),
+  `suppliedStep` and `supply` (memoized callable slots bound at composition),
+  and `sourceSlot`, `suppliedSource`, `supplySource` (separately addressed
+  current source calls with tracked arguments and explicit source outcomes),
   the canonical `forward` argument origins, and `compose`. Step callbacks also
   receive `hasOwn(value, key)` for own-member presence and the observed
   `untracked` read.
@@ -203,3 +245,38 @@ This projection performs no evaluation, source verification, acceptance mutation
 or dispatch. Lazy values retain the supplied reader/Tracking lifetime. It is not
 a recent-history query, subscription or independent-reader API. See the
 [scope and evidence mapping](../../docs/plans/preview-projection.md).
+
+## Finite exact History selection (alpha)
+
+`readHistorySelection` reads one caller-selected fact or fingerprint from an
+existing History file. Use the generated alpha declarations through the
+[private-alpha consumer recipe](../../docs/private-alpha-workspace-consumers.md).
+The caller retains the exact completed-result reference from an earlier result;
+this operation performs no discovery or freshness decision.
+
+```ts
+import { readHistorySelection } from 'microdelta';
+import type { IHistorySelectionRequest } from 'microdelta';
+
+declare const reference: IHistorySelectionRequest['reference'];
+const answer = readHistorySelection(
+  { location: '/existing/history.sqlite', logicalStore: 'store:contributors' },
+  { kind: 'fact', reference, request: { operation: 'value', address: [{ kind: 'property', key: 'summary' }] } },
+);
+if (answer.kind === 'fact') {
+  console.log(answer.selected.fact);
+}
+```
+
+The synchronous call returns detached data after ending and closing its native
+read scope, including nested containers. It opens no workspace and loads no
+author module. Fingerprint requests use `kind: 'fingerprint'` and an existing
+selected-fingerprint request; their replies preserve compatible, incompatible
+and unavailable outcomes after exact-reference validation. Storage, schema,
+identity and integrity failures remain errors.
+
+This distinct coordinated readonly operation permits the selected native WAL/SHM
+coordination described in the [finite selection contract](../../docs/plans/finite-history-selection.md).
+It preserves main bytes and committed WAL without initialization, migration,
+recovery, checkpoint or writable fallback. It does not change the rollback-only
+observation reader or add a CLI command.

@@ -11,6 +11,7 @@ import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { workflowJobs } from './release-workflow.mjs';
+import { workflowRoute } from './pr-ci-workflow.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const cli = path.join(root, 'node_modules/@changesets/cli/bin.js');
@@ -90,7 +91,7 @@ function run(directory, ...args) {
   });
 }
 
-test('workspace pins a Node 20-compatible Changesets CLI and names reviewable tasks', async () => {
+test('workspace pins the reviewed Changesets CLI for its Node 24 baseline and names reviewable tasks', async () => {
   const workspace = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
   assert.equal(workspace.devDependencies['@changesets/cli'], '2.31.1');
   assert.match(workspace.scripts['changeset:add'], /changeset/u);
@@ -129,7 +130,13 @@ test('automatic version PRs request checks against their exact generated branch'
   assert.match(workflow, /ref: pull\.head\.ref/u);
   assert.match(workflow, /outputs\.pullRequestNumber/u);
   assert.match(workflow, /changesets\/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d/u);
-  assert.match(check, /on: \[push, pull_request, workflow_dispatch\]/u);
+  assert.equal(workflowRoute(check, 'push', 'main'), true);
+  assert.equal(workflowRoute(check, 'push', 'feature'), false);
+  assert.equal(workflowRoute(check, 'pull_request', 'feature'), false);
+  // The version caller selects the generated branch without dispatch inputs.
+  assert.equal(workflowRoute(check, 'workflow_dispatch', 'changeset-release/main'), true);
+  assert.doesNotMatch(check, /inputs:/u);
+  assert.deepEqual(workflowJobs(check).core.match(/- run: (.+)/gu), ['- run: npm ci', '- run: npm run check', '- run: npm test', '- run: npm run build']);
   assert.match(metadata, /workflow_dispatch:/u);
   assert.match(metadata, /pr_number:/u);
   assert.doesNotMatch(workflow, /pull_request_target|auto-merge|enable-pull-request-automerge/iu);

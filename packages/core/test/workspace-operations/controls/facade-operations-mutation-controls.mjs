@@ -99,14 +99,15 @@ const controls = [
   {
     name: 'stop intent is not checked before the promotion commit',
     target: 'supervision',
-    anchor: "if (state.stopped.signal.aborted) {\n                        throw new SupervisionError('stopped', `Run ${context.runId} is stopped: it records no promotion`);",
-    replacement: "if (false) {\n                        throw new SupervisionError('stopped', `Run ${context.runId} is stopped: it records no promotion`);",
+    anchor: "if (state.stopped.signal.aborted) {\n                            throw new SupervisionError('stopped', `Run ${context.runId} is stopped: it records no promotion`);",
+    replacement: "if (false) {\n                            throw new SupervisionError('stopped', `Run ${context.runId} is stopped: it records no promotion`);",
   },
   {
-    name: 'the paid-like assessment is declared safe to repeat, so a lost response is replayed',
+    // A one-attempt override is valid generally, but this example promises the omitted three-attempt acquisition allowance.
+    name: 'the paid-like assessor suppresses the default acquisition retries',
     target: 'assessment',
     anchor: "name: 'assess',",
-    replacement: "name: 'assess', safeToRepeat: true, retry: { maxAttempts: 3 },",
+    replacement: "name: 'assess', retry: { maxAttempts: 1 },",
   },
   {
     name: 'a first interrupt requests a hard stop instead of a soft one',

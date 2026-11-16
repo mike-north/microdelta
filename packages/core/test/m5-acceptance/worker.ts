@@ -100,6 +100,7 @@ export interface IAckFault {
 /** One caller command. */
 export type ICommand =
   | { readonly kind: 'members'; readonly step?: 'assess' | 'isolated' }
+  | { readonly kind: 'members-twice' }
   | { readonly kind: 'fold' }
   | { readonly kind: 'tally' }
   | { readonly kind: 'check'; readonly key: string }
@@ -181,6 +182,8 @@ export interface ILifecycleJson {
 export interface IResultJson {
   readonly runId: string;
   readonly members: Readonly<Record<string, IMemberJson>>;
+  /** Sequential member outcomes from distinct request passes within one private run, before any later run can renew allowance. */
+  readonly memberPasses?: readonly [Readonly<Record<string, IMemberJson>>, Readonly<Record<string, IMemberJson>>];
   readonly discovery: string | null;
   /** What the framework says about discovery that did not key: a refusal's reason or a rejection's diagnostic message. */
   readonly discoveryDetail: string | null;
@@ -524,6 +527,17 @@ async function command(job: IJob, given: Exclude<ICommand, { readonly kind: 'lif
       case 'members': {
         const report = await live.resolveMembers({ template: templateSlot, step: given.step ?? stepSlot }, requestKey());
         result = { ...result, discovery: report.discovery.kind, discoveryDetail: discoveryDetail(report.discovery), members: Object.fromEntries(report.members.map((member) => [member.key, describeMember(member)])) };
+        break;
+      }
+      case 'members-twice': {
+        // Each public request gets its own context while the enclosing run keeps
+        // the same private allowance and operation address across both passes.
+        const first = await live.resolveMembers({ template: templateSlot, step: stepSlot }, requestKey());
+        const firstMembers = Object.fromEntries(first.members.map((member) => [member.key, describeMember(member)]));
+        const second = await live.resolveMembers({ template: templateSlot, step: stepSlot }, requestKey());
+        const secondMembers = Object.fromEntries(second.members.map((member) => [member.key, describeMember(member)]));
+        result = { ...result, discovery: second.discovery.kind, discoveryDetail: discoveryDetail(second.discovery),
+          members: secondMembers, memberPasses: [firstMembers, secondMembers] };
         break;
       }
       case 'fold': {

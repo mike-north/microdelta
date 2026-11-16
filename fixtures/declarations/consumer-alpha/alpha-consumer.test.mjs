@@ -65,6 +65,7 @@ test('a consumer beside the checkout compiles with relative alpha paths and load
         microdelta: ['packages/core/dist/api/microdelta.alpha.d.ts'],
         '@microdelta/definition': ['packages/definition/dist/api/definition.alpha.d.ts'],
         '@microdelta/history': ['packages/history/dist/api/history.alpha.d.ts'],
+        '@microdelta/machine': ['packages/machine/dist/api/machine.alpha.d.ts'],
         '@microdelta/materialization': ['packages/materialization/dist/api/materialization.alpha.d.ts'],
         '@microdelta/resolution': ['packages/resolution/dist/api/resolution.alpha.d.ts'],
         '@microdelta/supervision': ['packages/supervision/dist/api/supervision.alpha.d.ts'],
@@ -76,7 +77,11 @@ test('a consumer beside the checkout compiles with relative alpha paths and load
   const configPath = path.join(consumer, 'tsconfig.json');
   writeFileSync(configPath, JSON.stringify(config, null, 2));
   const diagnostics = diagnosticsForConfig(configPath, consumer);
-  assert.deepEqual(diagnostics, [], 'relative declaration mappings should compile from beside the checkout');
+  const problems = diagnostics.map((diagnostic) => ({
+    code: diagnostic.code,
+    message: ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n'),
+  }));
+  assert.deepEqual(problems, [], 'relative declaration mappings should compile from beside the checkout');
 
   const consumerModules = path.join(consumer, 'node_modules');
   mkdirSync(consumerModules);

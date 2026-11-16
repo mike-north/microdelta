@@ -68,9 +68,31 @@ export interface IAnySourceDeclaration<TFamily extends IBindingFamily> extends I
 }
 
 // @alpha
+export interface IAnySourceSlot<TFamily extends IBindingFamily> extends ISourceSlotBrand<TFamily> {
+    // (undocumented)
+    readonly kind: 'source-slot';
+    // (undocumented)
+    readonly slot: string;
+}
+
+// @alpha
 export interface IAnyStepSlot<TFamily extends IBindingFamily> extends IStepSlotBrand<TFamily> {
     readonly kind: 'step-slot';
     readonly slot: string;
+}
+
+// @alpha
+export interface IAnySuppliedSourceDeclaration<TFamily extends IBindingFamily> extends IDeclarationBrand<TFamily> {
+    // (undocumented)
+    readonly finality: ((context: never) => unknown) | undefined;
+    // (undocumented)
+    readonly kind: 'supplied-source';
+    // (undocumented)
+    readonly label: string | undefined;
+    // (undocumented)
+    readonly run: (context: never) => unknown;
+    // (undocumented)
+    readonly version: number;
 }
 
 // @alpha
@@ -162,7 +184,7 @@ export type IBindingResolution<TFamily extends IBindingFamily = IBindingFamily> 
 export type IBindingRole = 'input' | 'callable' | 'step';
 
 // @alpha
-export type IBindingTarget<TFamily extends IBindingFamily> = IInputTarget | ICallableTarget | ISuppliedStepTarget<TFamily> | IStepTarget<TFamily>;
+export type IBindingTarget<TFamily extends IBindingFamily> = IInputTarget | ICallableTarget | ISuppliedStepTarget<TFamily> | ISuppliedSourceTarget<TFamily> | IStepTarget<TFamily>;
 
 // @alpha
 export interface ICallableTarget {
@@ -173,7 +195,7 @@ export interface ICallableTarget {
 }
 
 // @alpha
-export type ICallOf<TFamily extends IBindingFamily, TChild> = TChild extends IStepSlot<TFamily, infer TParameters, infer TResult> ? IDeclaredCallHandle<IApply<TFamily['views'], TResult>, TParameters> : IDeclaredCallHandle<IApply<TFamily['views'], IResultOf<TFamily, TChild>>>;
+export type ICallOf<TFamily extends IBindingFamily, TChild> = TChild extends IStepSlot<TFamily, infer TParameters, infer TResult> | ISourceSlot<TFamily, infer TParameters, infer TResult> ? IDeclaredCallHandle<IApply<TFamily['views'], TResult>, TParameters> : IDeclaredCallHandle<IApply<TFamily['views'], IResultOf<TFamily, TChild>>>;
 
 // @alpha
 export type ICalls<TFamily extends IBindingFamily, TChildren extends IChildDeclarations<TFamily>> = {
@@ -188,7 +210,7 @@ export interface ICancelledEntry {
 }
 
 // @alpha
-export type IChildDeclaration<TFamily extends IBindingFamily> = IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily> | IAnyStepSlot<TFamily>;
+export type IChildDeclaration<TFamily extends IBindingFamily> = IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily> | IAnyStepSlot<TFamily> | IAnySourceSlot<TFamily>;
 
 // @alpha
 export type IChildDeclarations<TFamily extends IBindingFamily> = {
@@ -244,8 +266,9 @@ export interface ICompositionOptions<TFamily extends IBindingFamily> {
     readonly members?: readonly IMemberRegistration<TFamily>[];
     readonly scope: string;
     readonly steps?: readonly IStepRegistration<TFamily>[];
-    readonly supplied?: readonly ISuppliedStepRegistration<TFamily>[];
+    readonly supplied?: readonly (ISuppliedStepRegistration<TFamily> | ISuppliedSourceRegistration<TFamily>)[];
     readonly templates?: readonly IAnyTemplateDeclaration<TFamily>[];
+    readonly traversals?: readonly ITraversalDeclaration<TFamily>[];
 }
 
 // @alpha
@@ -265,11 +288,18 @@ export interface IDeclarations<TFamily extends IBindingFamily> {
     memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult extends object = object>(options: IMemoOptions<TFamily, TChildren, TResult>, ...root: [Awaited<TResult>] extends [object] ? [] : [unsupportedResultRoot: never]): IMemoDeclaration<TFamily, TChildren, TResult>;
     openInvocation(composition: IComposition<TFamily>, parent: IBindingDescriptor, port: IInvocationPort<TFamily>): IInvocation<TFamily>;
     outcomeFold<TTemplate extends IAnyTemplateDeclaration<TFamily>, TStep extends keyof IStepsOf<TTemplate> & string, TResult>(options: IOutcomeFoldOptions<TFamily, TTemplate, TStep, TResult>): IOutcomeFoldDeclaration<TFamily, IResultOf<TFamily, IStepsOf<TTemplate>[TStep]>, TResult>;
+    resolveRootAcquisition(composition: IComposition<TFamily>, witness: unknown): ITraversalBinding;
+    rootAcquisition(composition: IComposition<TFamily>, relationship: ITraversalDeclaration<TFamily>): IRootAcquisitionWitness<TFamily>;
+    rootArgumentRecipes(composition: IComposition<TFamily>, witness: unknown, values: readonly [unknown, string | undefined], justified: boolean): IInvocationArguments;
     source<TResult extends object>(options: ISourceOptions<TFamily, TResult>): ISourceDeclaration<TFamily, TResult>;
+    sourceSlot<TParameters extends readonly unknown[] = readonly [], TResult extends object = object>(options: IStepSlotOptions): ISourceSlot<TFamily, TParameters, TResult>;
     stepSlot<TParameters extends readonly unknown[] = readonly [], TResult = unknown>(options: IStepSlotOptions): IStepSlot<TFamily, TParameters, TResult>;
+    suppliedSource<TParameters extends readonly unknown[] = readonly [], TResult extends object = object>(options: ISuppliedSourceOptions<TFamily, TParameters, TResult>): ISuppliedSourceDeclaration<TFamily, TParameters, TResult>;
     suppliedStep<TParameters extends readonly unknown[] = readonly [], TResult = unknown>(options: ISuppliedStepOptions<TFamily, TParameters, TResult>): ISuppliedStepDeclaration<TFamily, TParameters, TResult>;
     supply<TParameters extends readonly unknown[], TResult>(options: ISupplyOptions<TFamily, TParameters, TResult>): ISuppliedStepRegistration<TFamily>;
+    supplySource<TParameters extends readonly unknown[], TResult>(options: ISupplySourceOptions<TFamily, TParameters, TResult>): ISuppliedSourceRegistration<TFamily>;
     template<TCollection extends IAnySourceDeclaration<TFamily>, TSteps extends ITemplateSteps<TFamily>>(options: ITemplateOptions<TFamily, TCollection, TSteps>): ITemplateDeclaration<TFamily, TCollection, TSteps>;
+    traversal(options: ITraversalOptions<TFamily>): ITraversalDeclaration<TFamily>;
 }
 
 // @alpha
@@ -297,7 +327,7 @@ export interface IDeclaredEdge {
 }
 
 // @alpha
-export type IDeclaredInvocationRequest<TFamily extends IBindingFamily, TResult> = ISourceCallRequest<TFamily, TResult> | IMemoCallRequest<TFamily> | ISuppliedCallRequest<TFamily>;
+export type IDeclaredInvocationRequest<TFamily extends IBindingFamily, TResult> = ISourceCallRequest<TFamily, TResult> | IMemoCallRequest<TFamily> | ISuppliedCallRequest<TFamily> | ISuppliedSourceCallRequest<TFamily>;
 
 // @alpha
 export type IDefinitionErrorCode = 'invalid-subject' | 'invalid-version' | 'invalid-callback' | 'illegal-edge' | 'forged-declaration' | 'invalid-descriptor' | 'invalid-input' | 'conflicting-subject' | 'unresolved-parent' | 'composition-phase' | 'scope-closed' | 'scope-inactive' | 'unsupported-arguments' | 'invalid-argument' | 'missing-slot' | 'ambiguous-slot' | 'invalid-result' | 'forged-composition' | 'invalid-bindings' | 'invalid-previous' | 'frozen' | 'invalid-template' | 'invalid-collection' | 'invalid-members' | 'skipped-member' | 'unsuccessful-member';
@@ -338,6 +368,7 @@ export interface IFailedEntry {
 // @alpha
 export type IFinalityContext<TFamily extends IBindingFamily, TResult> = TFamily['source'] & {
     readonly previous: IApply<TFamily['previous'], TResult>;
+    readonly evidence?: IApply<TFamily['views'], TResult>;
 };
 
 // @alpha
@@ -494,7 +525,7 @@ export interface IInputTarget {
 }
 
 // @alpha
-export type IInvocation<TFamily extends IBindingFamily> = IMemoInvocation<TFamily> | ISourceInvocation<TFamily> | ISuppliedInvocation<TFamily> | IFoldInvocation<TFamily> | IOutcomeFoldInvocation<TFamily>;
+export type IInvocation<TFamily extends IBindingFamily> = IMemoInvocation<TFamily> | ISourceInvocation<TFamily> | ISuppliedInvocation<TFamily> | ISuppliedSourceInvocation<TFamily> | IFoldInvocation<TFamily> | IOutcomeFoldInvocation<TFamily>;
 
 // @alpha
 export type IInvocationArguments = IEmptyArguments | readonly [IArgumentRecipe, ...IArgumentRecipe[]];
@@ -690,10 +721,21 @@ export interface IPreviousSupplier<TFamily extends IBindingFamily> {
 // @alpha
 export type IResultOf<TFamily extends IBindingFamily, TDeclaration> = TDeclaration extends ISourceDeclaration<TFamily, infer TResult> ? TResult : TDeclaration extends ISourceDeclaration<TFamily, infer TResult, {
     readonly member: never;
-}> ? TResult : TDeclaration extends IStepSlot<TFamily, readonly unknown[], infer TResult> ? TResult : TDeclaration extends {
+}> ? TResult : TDeclaration extends IStepSlot<TFamily, readonly unknown[], infer TResult> | ISourceSlot<TFamily, readonly unknown[], infer TResult> ? TResult : TDeclaration extends {
     readonly kind: 'memo';
     readonly run: (context: never) => infer TResult;
 } ? Awaited<TResult> : never;
+
+// @alpha
+export interface IRootAcquisitionWitness<TFamily extends IBindingFamily> {
+    // (undocumented)
+    readonly __microdeltaFamily?: (family: TFamily) => TFamily;
+    readonly __microdeltaRootAcquisition: unique symbol;
+    // (undocumented)
+    readonly kind: 'root-acquisition';
+    // (undocumented)
+    readonly relationship: string;
+}
 
 // @alpha
 export function isComposing(): boolean;
@@ -720,6 +762,12 @@ export interface ISkippedEntry {
 export type ISlotSubject<TParameters extends readonly unknown[]> = (derived: IDerivedArguments<TParameters>) => string;
 
 // @alpha
+export interface ISourceArgumentSupplier<TFamily extends IBindingFamily> {
+    // (undocumented)
+    views<TParameters extends readonly unknown[], TResult>(declaration: ISuppliedSourceDeclaration<TFamily, TParameters, TResult>): IArgumentViews<TFamily, TParameters>;
+}
+
+// @alpha
 export interface ISourceCallRequest<TFamily extends IBindingFamily, TResult> {
     readonly child: ISourceDeclaration<TFamily, TResult, never>;
     readonly kind: 'source';
@@ -735,9 +783,15 @@ export interface ISourceDeclaration<TFamily extends IBindingFamily, TResult, TEx
 }
 
 // @alpha
+export interface ISourceEvidenceSupplier<TFamily extends IBindingFamily> {
+    // (undocumented)
+    view<TResult>(declaration: ISourceDeclaration<TFamily, TResult, never>): IApply<TFamily['views'], TResult>;
+}
+
+// @alpha
 export interface ISourceInvocation<TFamily extends IBindingFamily> extends IInvocationScope {
-    apply<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily> | undefined, invoke: IAuthorInvoker<TOutcome>, member?: IMemberSupplier<TFamily>): TOutcome;
-    applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>, member?: IMemberSupplier<TFamily>): TOutcome;
+    apply<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily> | undefined, invoke: IAuthorInvoker<TOutcome>, member?: IMemberSupplier<TFamily>, evidence?: ISourceEvidenceSupplier<TFamily>): TOutcome;
+    applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>, member?: IMemberSupplier<TFamily>, evidence?: ISourceEvidenceSupplier<TFamily>): TOutcome;
     readonly hasFinality: boolean;
     // (undocumented)
     readonly kind: 'source';
@@ -754,9 +808,30 @@ export interface ISourceOptions<TFamily extends IBindingFamily, TResult, TExtra 
 }
 
 // @alpha
+export interface ISourcePreviousSupplier<TFamily extends IBindingFamily> {
+    // (undocumented)
+    carrier<TResult>(declaration: ISuppliedSourceDeclaration<TFamily, never, TResult>): IApply<TFamily['previous'], TResult>;
+}
+
+// @alpha
 export type ISourceRunContext<TFamily extends IBindingFamily, TResult> = TFamily['source'] & {
     readonly previous: IApply<TFamily['previous'], TResult> | undefined;
+    readonly evidence?: IApply<TFamily['views'], TResult>;
 };
+
+// @alpha
+export interface ISourceSlot<TFamily extends IBindingFamily, TParameters extends readonly unknown[], TResult> extends IAnySourceSlot<TFamily> {
+    // (undocumented)
+    readonly __microdeltaSignature?: (parameters: TParameters) => TResult;
+}
+
+// @alpha
+export interface ISourceSlotBrand<TFamily extends IBindingFamily> {
+    // (undocumented)
+    readonly __microdeltaFamily?: (family: TFamily) => TFamily;
+    // (undocumented)
+    readonly __microdeltaSourceSlot: unique symbol;
+}
 
 // @alpha
 export type IStepDeclaration<TFamily extends IBindingFamily> = IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily> | IAnyFoldDeclaration<TFamily> | IAnyOutcomeFoldDeclaration<TFamily>;
@@ -820,6 +895,80 @@ export interface ISuppliedInvocation<TFamily extends IBindingFamily> extends IIn
 }
 
 // @alpha
+export interface ISuppliedSourceCallRequest<TFamily extends IBindingFamily> {
+    // (undocumented)
+    readonly child: IAnySuppliedSourceDeclaration<TFamily>;
+    // (undocumented)
+    readonly kind: 'supplied-source';
+    // (undocumented)
+    readonly scope: IInvocationScope;
+    // (undocumented)
+    readonly subject: IScopedSubject;
+    // (undocumented)
+    readonly witness: INestedInvocationWitness;
+}
+
+// @alpha
+export interface ISuppliedSourceDeclaration<TFamily extends IBindingFamily, TParameters extends readonly unknown[], TResult> extends IAnySuppliedSourceDeclaration<TFamily> {
+    // (undocumented)
+    readonly finality: ((context: ISuppliedSourceFinalityContext<TFamily, TParameters, TResult>) => unknown) | undefined;
+    // (undocumented)
+    readonly run: (context: ISuppliedSourceRunContext<TFamily, TParameters, TResult>) => IApply<TFamily['outcomes'], TResult> | Promise<IApply<TFamily['outcomes'], TResult>>;
+}
+
+// @alpha
+export type ISuppliedSourceFinalityContext<TFamily extends IBindingFamily, TParameters extends readonly unknown[], TResult> = TFamily['source'] & {
+    readonly args: IArgumentViews<TFamily, TParameters>;
+    readonly previous: IApply<TFamily['previous'], TResult>;
+};
+
+// @alpha
+export interface ISuppliedSourceInvocation<TFamily extends IBindingFamily> extends IInvocationScope {
+    // (undocumented)
+    apply<TOutcome>(bindings: TFamily['source'], previous: ISourcePreviousSupplier<TFamily> | undefined, args: ISourceArgumentSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>): TOutcome;
+    // (undocumented)
+    applyFinality<TOutcome>(bindings: TFamily['source'], previous: ISourcePreviousSupplier<TFamily>, args: ISourceArgumentSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>): TOutcome;
+    // (undocumented)
+    readonly hasFinality: boolean;
+    // (undocumented)
+    readonly kind: 'supplied-source';
+}
+
+// @alpha
+export interface ISuppliedSourceOptions<TFamily extends IBindingFamily, TParameters extends readonly unknown[], TResult> {
+    // (undocumented)
+    readonly finality?: (context: ISuppliedSourceFinalityContext<TFamily, TParameters, TResult>) => unknown;
+    // (undocumented)
+    readonly label?: string;
+    // (undocumented)
+    readonly run: (context: ISuppliedSourceRunContext<TFamily, TParameters, TResult>) => IApply<TFamily['outcomes'], TResult> | Promise<IApply<TFamily['outcomes'], TResult>>;
+    // (undocumented)
+    readonly version?: number;
+}
+
+// @alpha
+export interface ISuppliedSourceRegistration<TFamily extends IBindingFamily> extends ISuppliedStepRegistrationBrand<TFamily> {
+    // (undocumented)
+    readonly declaration: IAnySuppliedSourceDeclaration<TFamily>;
+    // (undocumented)
+    readonly slot: string;
+}
+
+// @alpha
+export type ISuppliedSourceRunContext<TFamily extends IBindingFamily, TParameters extends readonly unknown[], TResult> = TFamily['source'] & {
+    readonly args: IArgumentViews<TFamily, TParameters>;
+    readonly previous: IApply<TFamily['previous'], TResult> | undefined;
+};
+
+// @alpha
+export interface ISuppliedSourceTarget<TFamily extends IBindingFamily> {
+    readonly declaration: IAnySuppliedSourceDeclaration<TFamily>;
+    readonly kind: 'supplied-source';
+    readonly role: 'callable';
+    subjectFor(arguments_: IInvocationArguments): IScopedSubject;
+}
+
+// @alpha
 export interface ISuppliedStepDeclaration<TFamily extends IBindingFamily, TParameters extends readonly unknown[], TResult> extends IAnySuppliedStepDeclaration<TFamily> {
     readonly run: (context: ISuppliedStepRunContext<TFamily, TParameters>) => TResult | Promise<TResult>;
 }
@@ -860,6 +1009,16 @@ export interface ISuppliedStepTarget<TFamily extends IBindingFamily> {
 export interface ISupplyOptions<TFamily extends IBindingFamily, TParameters extends readonly unknown[], TResult> {
     readonly declaration: ISuppliedStepDeclaration<TFamily, TParameters, TResult>;
     readonly slot: IStepSlot<TFamily, TParameters, TResult>;
+    readonly subject: ISlotSubject<TParameters>;
+}
+
+// @alpha
+export interface ISupplySourceOptions<TFamily extends IBindingFamily, TParameters extends readonly unknown[], TResult> {
+    // (undocumented)
+    readonly declaration: ISuppliedSourceDeclaration<TFamily, TParameters, TResult>;
+    // (undocumented)
+    readonly slot: ISourceSlot<TFamily, TParameters, TResult>;
+    // (undocumented)
     readonly subject: ISlotSubject<TParameters>;
 }
 
@@ -938,6 +1097,48 @@ export interface ITopology {
     readonly slots: readonly string[];
     readonly steps: readonly IBindingDescriptor[];
     readonly templates: readonly ITemplateTopology[];
+    readonly traversals: readonly ITraversalBinding[];
+}
+
+// @alpha
+export interface ITraversalBinding {
+    // (undocumented)
+    readonly collection: IBindingDescriptor;
+    // (undocumented)
+    readonly fold: IBindingDescriptor;
+    // (undocumented)
+    readonly page: IBindingDescriptor;
+    // (undocumented)
+    readonly query: IBindingDescriptor;
+    // (undocumented)
+    readonly slot: string;
+    // (undocumented)
+    readonly template: string;
+}
+
+// @alpha
+export interface ITraversalDeclaration<TFamily extends IBindingFamily> {
+    readonly __microdeltaFamily?: (family: TFamily) => TFamily;
+    readonly __microdeltaTraversal: unique symbol;
+    // (undocumented)
+    readonly kind: 'traversal';
+    readonly slot: string;
+}
+
+// @alpha
+export interface ITraversalOptions<TFamily extends IBindingFamily> {
+    // (undocumented)
+    readonly collection: IAnySourceDeclaration<TFamily>;
+    // (undocumented)
+    readonly fold: IAnyFoldDeclaration<TFamily>;
+    // (undocumented)
+    readonly page: IAnySourceSlot<TFamily>;
+    // (undocumented)
+    readonly query: string;
+    // (undocumented)
+    readonly slot: string;
+    // (undocumented)
+    readonly template: IAnyTemplateDeclaration<TFamily>;
 }
 
 // @alpha
@@ -964,7 +1165,7 @@ export type IUnsupportedWitnessReason = 'malformed' | 'witness-version' | 'argum
 export type IWitnessResolution<TFamily extends IBindingFamily> = {
     readonly status: 'bound';
     readonly parent: IStepTarget<TFamily>;
-    readonly child: IStepTarget<TFamily> | ISuppliedStepTarget<TFamily>;
+    readonly child: IStepTarget<TFamily> | ISuppliedStepTarget<TFamily> | ISuppliedSourceTarget<TFamily>;
     readonly witness: IInvocationWitness;
 } | {
     readonly status: 'missing';

@@ -37,7 +37,8 @@
  *   with that work pending; once only deferred work remains the run releases
  *   the writer lease and, in sleep mode, waits for the earliest time (any
  *   stop ends the wait) and runs another pass, or in exit mode returns,
- *   reporting the time it waits until.
+ *   reporting the time it waits until. A terminal request failure returns
+ *   without waiting, preserving the time of deferred siblings left behind.
  *
  * Supervision never decides reuse, touches History rows or reads the host
  * itself; it persists operations only through its journal and accounting
@@ -45,6 +46,7 @@
  */
 import { isComposing } from '@microdelta/definition';
 import type { IBindingDescriptor } from '@microdelta/definition';
+import { ResolutionError } from '@microdelta/resolution';
 import type {
   IAdmissionDecision,
   IAdmissionRequest,
@@ -53,6 +55,7 @@ import type {
   IExecutionAdmission,
   IFoldOutcome,
   IFoldResolution,
+  IFrontierOffer,
   ILifecycleEvent,
   ILifecycleObserver,
   IMemberResolution,
@@ -60,8 +63,12 @@ import type {
   IOutcomeFoldOutcome,
   IOutcomeFoldResolution,
   IRecoveryResult,
+  IRequestSourceEvidence,
   IResolution,
   IResolutionOutcome,
+  ITraversalContinuation,
+  ITraversalPageOutcome,
+  ITraversalRunAuthority,
 } from '@microdelta/resolution';
 
 import type {
@@ -84,9 +91,13 @@ import type {
   IRunResult,
   IRunScope,
   IStrictFoldOutcome,
+  ITraversalAdapter,
+  ITraversalReport,
   ISupervision,
   ISupervisionOptions,
 } from './contracts.js';
+import { _createExecutionObservationProducer } from './observation.js';
+import type { IApplicationStatement, IApplicationStatementSubmission, IExecutionObservationProducer, IObservedRun } from './observation.js';
 import { createAbortSource, createStopController } from './control.js';
 import type { IRunTimer, IStopLevel, IStopState } from './control.js';
 import { SupervisionError } from './errors.js';
@@ -128,11 +139,20 @@ const defaultWindow = 8;
  * settled (which later passes do not execute again), and whether a report is
  * final (no wait could change it).
  */
+/** One writer-generated refusal observed by a particular request's first lease wait. */
+interface IFirstLeaseStop {
+  readonly error: SupervisionError;
+  /** Present only when this refusal was constructed inside that coordinator's own stop transition. */
+  readonly coordinator: object | undefined;
+}
+
 interface IPasses<P, R> {
   pass(lease: IRunLease, requestKey: string): Promise<P>;
   report(result: P, scope: IRequestScope, previous: R | undefined): R;
   settled(report: R): readonly string[];
   final(report: R): boolean;
+  /** Passive private evidence only; normal first-pass rejection is unchanged. The callback must not throw. */
+  firstLeaseStopped?(fact: IFirstLeaseStop): void;
 }
 
 /**
@@ -234,7 +254,10 @@ function notify(observers: readonly ICapturedObserver[], event: IRunEvent): void
 }
 
 /** Every {@link IRunOperationName}, for the runtime check of untyped callers. */
-const runOperationNames: ReadonlySet<string> = new Set<IRunOperationName>(['check', 'inspectOperations', 'ordinary', 'read', 'recover', 'resolve', 'resolveFold', 'resolveMembers', 'resolveOutcomeFold', 'settleOperation', 'promote', 'promotions']);
+const runOperationNames: ReadonlySet<string> = new Set<IRunOperationName>(['check', 'inspectOperations', 'ordinary', 'read', 'recover', 'resolve', 'resolveFold', 'traverse', 'resolveMembers', 'resolveOutcomeFold', 'settleOperation', 'promote', 'promotions']);
+
+/** CMP-8's ordinary run-level Resolution failures retain rejection across acquisition coordination. */
+const runLevelResolutionFailures: ReadonlySet<ResolutionError['code']> = new Set<ResolutionError['code']>(['admission-failure', 'observer-failure', 'integrity', 'wrong-intent', 'invalid-request']);
 
 /**
  * Classify one member's Resolution outcome as its typed member outcome
@@ -383,6 +406,9 @@ function outcomeFoldReport(resolved: IOutcomeFoldResolution, scope: IRequestScop
 export function createSupervision(options: ISupervisionOptions): ISupervision {
   const scope: IRunScope<IRunFrame> = options.context.createAsyncContext<IRunFrame>();
   const timer = options.timer;
+  const rateOptions = options.sharedRates;
+  /** Capture the composition owner once; later option mutation cannot reset its ledger between runs. */
+  const sharedRates: ISupervisionOptions['sharedRates'] = rateOptions === undefined ? undefined : Object.freeze({ coordinator: rateOptions.coordinator, elapsedClock: rateOptions.elapsedClock });
   /** Process-local counter for generated run identifiers (volatile metadata). */
   let generated = 0;
 
@@ -412,7 +438,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     return runControls(liveFrame());
   }
 
-  async function run<T>(runOptions: IRunOptions, body: (run: IRun) => T | Promise<T>): Promise<IRunResult<Awaited<T>>> {
+  async function runInternal<T>(runOptions: IRunOptions, body: (run: IRun) => T | Promise<T>, producer?: IExecutionObservationProducer): Promise<IRunResult<Awaited<T>>> {
     if (isComposing()) {
       throw new SupervisionError('composition-phase', 'A run cannot start while a composition is being constructed');
     }
@@ -455,11 +481,18 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       analysis: runOptions.analysis,
       environment: runOptions.environment,
     });
+    producer?.prepare(context);
+    let enteredBody = false;
+    let setupState: ISupervisedRun | undefined;
+    let setupStarted: Set<Promise<unknown>> | undefined;
+    let setupUnsubscribe: (() => void) | undefined;
+    /** Setup-started work can diagnose during drain even when the body never begins. */
+    const diagnostics: string[] = [];
+    try {
     const observers = captureObservers(runOptions.observers);
     const policy = runOptions.admission ?? admitAll;
     const writer = runOptions.writer;
     const writerPolicy = writerWaitPolicy(runOptions.writerWait);
-    const diagnostics: string[] = [];
     /** The stop intent in force when the run closed; captured in the turn that closes it. */
     let closingStop: IStopState = controller.state;
     /** Where a failing listener of one of the run's abort signals is reported: a diagnostic, never a failure of the stop. */
@@ -474,6 +507,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
      * empty after its body settled.
      */
     const started = new Set<Promise<unknown>>();
+    setupStarted = started;
 
     /**
      * The run's external operations, over the ports assembly supplied. Its
@@ -482,15 +516,19 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
      */
     const engine: IOperationEngine | undefined = operationPorts === undefined || timer === undefined || random === undefined ? undefined : createOperationEngine({
       context,
+      ...(sharedRates === undefined ? {} : { sharedRates }),
       ports: operationPorts,
       random,
       timer,
+      ...(runOptions.retryPolicies === undefined ? {} : { retryPolicies: runOptions.retryPolicies }),
+      stop: controller,
       report: (event, position) => {
         state.report(event, position);
       },
       diagnose: (message) => {
         diagnostics.push(message);
       },
+      runPolicy: (work) => scope.run({ run: state, attempt: undefined, lane: undefined, request: undefined }, work),
     });
 
     const state: ISupervisedRun = {
@@ -509,6 +547,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         diagnostics.push(message);
       },
       report(event: IRunEvent, position: string): void {
+        producer?.observe(event);
         try {
           notify(observers, event);
         } catch {
@@ -533,6 +572,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         return state.hard.signal.aborted ? 'a hard stop took effect before the publication commit' : undefined;
       },
     };
+    setupState = state;
     const frame: IRunFrame = Object.freeze({ run: state, attempt: undefined, lane: undefined, request: undefined });
     /** Access to this run's frames in the shared scope; a frame of another run is not this run's. */
     const frames: IFrameAccess = Object.freeze({
@@ -564,6 +604,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       state.stopped.abort();
     };
     const unsubscribe = controller.subscribe(observeStop);
+    setupUnsubscribe = unsubscribe;
     observeStop(controller.state);
 
     /** The denial for work presented to, or decided after, a closed run. */
@@ -634,21 +675,38 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
      * request that starts while it lasts, so concurrent requests of one run
      * poll storage once per interval and proceed with the same lease.
      */
-    let writerWait: Promise<IRunLease> | undefined;
+    let writerWait: { readonly pending: Promise<IRunLease>; readonly observers: Set<(fact: IFirstLeaseStop) => void>; readonly refusal: { fact: IFirstLeaseStop | undefined } } | undefined;
+    /** Dynamic owner of a synchronous coordinator stop transition, never inferred from stop state or error shape. */
+    let stoppingCoordinator: object | undefined;
     /**
      * A valid writer lease for the next normal request: renewed or acquired
      * at once when possible, otherwise waited for under the run's policy. Any
      * stop ends a wait, as it ends a wait for a time: the request it precedes
      * has not started, and stop intent forbids the new work it would bring.
      */
-    const writerLease = (): Promise<IRunLease> => {
+    const writerLease = (observeStop?: (fact: IFirstLeaseStop) => void): Promise<IRunLease> => {
       if (writerWait !== undefined) {
-        return writerWait;
+        if (observeStop !== undefined) {
+          writerWait.observers.add(observeStop);
+          if (writerWait.refusal.fact !== undefined) { observeStop(writerWait.refusal.fact); }
+        }
+        return writerWait.pending;
       }
-      const pending = awaitWriter({ writer, policy: writerPolicy, timer, stop: state.stopped.signal, runId: context.runId });
-      writerWait = pending;
+      const observers = new Set<(fact: IFirstLeaseStop) => void>();
+      if (observeStop !== undefined) { observers.add(observeStop); }
+      const refusal: { fact: IFirstLeaseStop | undefined } = { fact: undefined };
+      const pending = awaitWriter({ writer, policy: writerPolicy, timer, stop: state.stopped.signal, runId: context.runId, stopped: error => {
+        const fact = Object.freeze({ error, coordinator: stoppingCoordinator });
+        refusal.fact = fact;
+        // Only private assignment-only observers are registered here. No
+        // author/host callback may intercept the wait's actual rejection.
+        for (const observer of observers) { observer(fact); }
+      } });
+      const wait = { pending, observers, refusal };
+      writerWait = wait;
       const finished = (): void => {
-        if (writerWait === pending) {
+        observers.clear();
+        if (writerWait === wait) {
           writerWait = undefined;
         }
       };
@@ -658,10 +716,23 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     /** Supervision's observer position for Resolution's lifecycle events. */
     const observer: ILifecycleObserver = Object.freeze({
       observe(event: ILifecycleEvent): void {
-        notify(observers, Object.freeze({ kind: 'step', runId: context.runId, event }));
+        const runEvent: IRunEvent = Object.freeze({ kind: 'step', runId: context.runId, event });
+        producer?.observe(runEvent);
+        notify(observers, runEvent);
       },
     });
-    const resolution: IResolution = runOptions.resolution(Object.freeze({ admission, observer, execution: supervisedExecution(state, frames) }));
+    /** Root acquisition belongs to the current run body, never an admitted member or a foreign frame. */
+    const traversalAuthority: ITraversalRunAuthority = Object.freeze({
+      currentOwner: (): object | undefined => state.open && scope.getStore()?.run === state ? state : undefined,
+      assertRoot(): void {
+        if (!state.open) { throw new SupervisionError('run-closed', 'Traversal authority belongs to a closed run'); }
+        if (scope.getStore()?.run !== state) { throw new SupervisionError('outside-run', 'Traversal authority requires its own current run'); }
+        const refusal = undeclaredCall('traverse');
+        if (refusal !== undefined) { throw refusal; }
+        if (state.stopped.signal.aborted) { throw new SupervisionError('stopped', 'Stop intent forbids new root acquisition or capture'); }
+      },
+    });
+    const resolution: IResolution = runOptions.resolution(Object.freeze({ admission, observer, traversalAuthority, execution: supervisedExecution(state, frames, (subject) => engine?.terminalClassificationError(subject)) }));
 
     /**
      * The refusal of a run operation called from inside a member's work or a
@@ -714,7 +785,9 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         await Promise.all([...started]);
       }
       state.open = false;
-      closingStop = controller.state;
+      resolution.traversals?.dispose();
+      producer?.seal();
+      closingStop = Object.freeze({ level: controller.state.level, cause: controller.state.cause, deadline: controller.state.deadline });
       unsubscribe();
     }
 
@@ -791,7 +864,9 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
      * releases the lease once only deferred work remains, waits for the
      * earliest time and runs another pass, in which the deferred work is
      * admitted again under the same operation identities. Each pass admits
-     * its executions under its own request key (see {@link passKey}).
+     * its executions under its own request key (see {@link passKey}). A
+     * terminal request still leaves deferred siblings pending: report their
+     * earliest time without sleeping or starting another pass.
      */
     async function inPasses<P, R>(requestKey: string, request: IPasses<P, R>): Promise<R> {
       const callerKey: unknown = requestKey;
@@ -805,7 +880,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       for (let number = 1; ; number += 1) {
         let lease: IRunLease;
         try {
-          lease = await leaseForPass();
+          lease = await leaseForPass(number === 1 ? request.firstLeaseStopped : undefined);
         } catch (error: unknown) {
           // A stop during a woken pass's wait for the lease ends the wait, as a stop during the sleep does: the request
           // returns the earlier pass's report and the time its deferred work waits until. A first pass's stop rejects, as
@@ -830,12 +905,23 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
           }
         }
         const reported = request.report(result, requestScope, previous);
-        if (requestScope.deferrals.length === 0 || request.final(reported)) {
+        if (requestScope.deferrals.length === 0) {
+          return reported;
+        }
+        // The member window bounds concurrent lanes, not this pass's total deferred work.
+        // Reduce scalar floors without turning an unbounded population into call arguments.
+        let until = Number.POSITIVE_INFINITY;
+        for (const notBefore of requestScope.deferrals) {
+          until = Math.min(until, notBefore);
+        }
+        if (request.final(reported)) {
+          // Finality ends this request, not its deferred siblings. Preserve only work left behind;
+          // a deferral that sleep mode later resumes must not become a stale run-level receipt.
+          waitingUntil = Math.min(waitingUntil ?? until, until);
           return reported;
         }
         previous = reported;
         settled = new Set([...settled, ...request.settled(reported)]);
-        const until = Math.min(...requestScope.deferrals);
         if (deferral === 'exit' || timer === undefined || state.stopped.signal.aborted) {
           waitingUntil = Math.min(waitingUntil ?? until, until);
           waitEvent(deferral === 'exit' || timer === undefined ? 'exiting' : 'stopped', until, releaseIfOnlyDeferred());
@@ -874,8 +960,8 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
      * `WriterBusyError` there; with none (the default) it waits until the lease
      * is granted or a stop ends the wait with `stopped`.
      */
-    function leaseForPass(): Promise<IRunLease> {
-      return writerLease();
+    function leaseForPass(observeStop?: (fact: IFirstLeaseStop) => void): Promise<IRunLease> {
+      return writerLease(observeStop);
     }
 
     /** The run's operation engine, or the refusal of an operator action on a run without one. */
@@ -898,12 +984,233 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     /** Offer a post-work ordinary event; a failure there is a diagnostic. */
     function afterOrdinary(label: string, phase: IOrdinaryPhase): void {
       try {
-        notify(observers, Object.freeze({ kind: 'ordinary', runId: context.runId, label, phase }));
+        const event: IRunEvent = Object.freeze({ kind: 'ordinary', runId: context.runId, label, phase });
+        producer?.observe(event);
+        notify(observers, event);
       } catch (error: unknown) {
         diagnostics.push(`Run observer failed at ${phase} of ordinary work ${label}`);
       }
     }
 
+    /**
+     * Own one page producer, one immutable normal consumer and one latest
+     * pending offer. Discovery and member work may progress together, but no
+     * queue or mutable request population is created. Every owned task settles
+     * before its capture authority is disposed; producer terminal facts and
+     * genuine consumer/host failures retain their separate causal owners.
+     */
+    async function coordinateTraversal(witness: unknown, adapter: ITraversalAdapter, traversalRequestKey: string): Promise<ITraversalReport> {
+      traversalAuthority.assertRoot();
+      const port = resolution.traversals;
+      if (port === undefined) { throw new SupervisionError('invalid-request', 'This Resolution has no declared traversal port'); }
+      const acquisition = port.open(witness);
+      /** The page pass may begin before its offered members, without waiting for page completion or a fixture barrier. */
+      interface IPageTask { readonly result: Promise<ITraversalPageOutcome>; readonly entered: Promise<boolean> }
+      /** Only this latest uncaptured offer can follow the current consumer. */
+      interface IOffered { readonly offer: IFrontierOffer; readonly ordinal: number; readonly final: boolean; readonly nextPageEntered: Promise<boolean> }
+      /** The task owns a single captured normal request, including every resumed pass. */
+      interface IConsumer { readonly result: Promise<void> }
+      /** Explicit owner/order preserves even a thrown undefined; promise await order never chooses attribution. */
+      const failures: { readonly owner: 'producer' | 'consumer'; readonly order: number; readonly error: unknown }[] = [];
+      const stopOwner = Object.freeze({});
+      let pending: IOffered | undefined;
+      let consumer: IConsumer | undefined;
+      let terminal: Exclude<ITraversalReport, { readonly kind: 'complete' }> | undefined;
+      let lastReport: IFoldReport | undefined;
+      /** Healthy traversal completion belongs only to the actual consumer of its final closed offer. */
+      let finalReport: IFoldReport | undefined;
+      let halted = false;
+      let closed = false;
+
+      /** End only future coordinator work; captured admitted work remains owned through drain. */
+      function stopStarts(): void {
+        if (halted) { return; }
+        halted = true;
+        pending = undefined;
+        try { acquisition.stop(); }
+        catch (error: unknown) { failures.push({ owner: 'producer', order: failures.length, error }); }
+      }
+
+      /** A genuine owner rejection always remains a rejection, including after an ordinary producer terminal. */
+      function failed(owner: 'producer' | 'consumer', error: unknown): void {
+        failures.push({ owner, order: failures.length, error });
+        stopStarts();
+      }
+
+      /** Only this synchronous new soft-stop transition can cause this coordinator's first-lease refusal. */
+      function producerTerminal(value: Exclude<ITraversalReport, { readonly kind: 'complete' }>): void {
+        if (halted) { return; }
+        terminal = value;
+        stopStarts();
+        if (value.kind === 'discovery-failed') {
+          const previous = stoppingCoordinator;
+          stoppingCoordinator = controller.state.level === 'none' ? stopOwner : undefined;
+          try { controller.request({ level: 'soft' }); }
+          catch (error: unknown) { failed('producer', error); }
+          finally { stoppingCoordinator = previous; }
+        }
+      }
+
+      /** A stop can arrive after producer closure while its final offer still waits for a consumer. */
+      function mayStartConsumer(): boolean {
+        if (halted) { return false; }
+        if (state.stopped.signal.aborted) {
+          producerTerminal(Object.freeze({ kind: 'stopped', reason: 'Stop intent prevented the next frontier consumer' }));
+          return false;
+        }
+        return true;
+      }
+
+      /** Start one ordinary acquisition; an entry acknowledgment is not a successful page/send acknowledgment. */
+      function page(number: number, continuation: ITraversalContinuation | undefined): IPageTask {
+        let enter: (value: boolean) => void = () => undefined;
+        const entered = new Promise<boolean>(resolve => { enter = resolve; });
+        let didEnter = false;
+        const result = state.track(async () => {
+          try {
+            return await inPasses(traversalRequestKey + '/page:' + String(number), {
+              pass: (lease, requestKey) => {
+                didEnter = true;
+                enter(true);
+                return acquisition.acquire({ requestKey, lease, ...(continuation === undefined ? {} : { continuation }) });
+              },
+              report: value => value,
+              settled: () => [],
+              final: () => true,
+            });
+          } finally {
+            // A rejected initial writer wait cannot leave a captured consumer
+            // waiting on an acknowledgment that will never be produced.
+            if (!didEnter) { enter(false); }
+          }
+        });
+        return { result, entered };
+      }
+
+      /** Capture eligibility is linearized synchronously, before the consumer's first asynchronous wait. */
+      function consume(offered: IOffered): void {
+        if (!mayStartConsumer()) { return; }
+        const normalRequestKey = traversalRequestKey + '/frontier:' + String(offered.ordinal);
+        let sourceEvidence: IRequestSourceEvidence;
+        try { sourceEvidence = acquisition.capture(offered.offer, normalRequestKey); }
+        catch (error: unknown) { failed('consumer', error); return; }
+        let firstPassEntered = false;
+        let firstStop: IFirstLeaseStop | undefined;
+        const result = state.track(async () => {
+          try {
+            // Let the independently owned next page enter its normal pass;
+            // never wait for that page's response or any test-only barrier.
+            const pageEntered = await offered.nextPageEntered;
+            if (!pageEntered || !mayStartConsumer()) { return; }
+            const report = await inPasses<IFoldResolution, IFoldReport>(normalRequestKey, {
+              firstLeaseStopped: fact => { firstStop = fact; },
+              pass: async (lease, requestKey) => {
+                firstPassEntered = true;
+                const resolved = await resolution.resolveFold({ step: acquisition.binding.fold, requestKey, lease, normalRequestKey, sourceEvidence });
+                diagnostics.push(...resolved.diagnostics);
+                return resolved;
+              },
+              report: (resolved, requestScope, previous) => foldReport(resolved, requestScope, previous?.members),
+              settled: reported => settledSteps(reported.members),
+              final: reported => reported.outcome.status === 'failed',
+            });
+            lastReport = report;
+            if (offered.final) { finalReport = report; }
+          } catch (error: unknown) {
+            // The request-local receipt names the exact writer-created error
+            // and this coordinator's own stop transition. Neither a stopped
+            // shape, an aborted signal nor a body that already entered proves
+            // this causal exception.
+            if (terminal?.kind === 'discovery-failed' && !firstPassEntered && firstStop?.coordinator === stopOwner && firstStop.error === error) { return; }
+            failed('consumer', error);
+          }
+        });
+        const owned: IConsumer = { result };
+        consumer = owned;
+        const settled = (): void => {
+          if (consumer !== owned) { return; }
+          consumer = undefined;
+          const next = pending;
+          pending = undefined;
+          if (next !== undefined && !halted) { consume(next); }
+        };
+        // Rejections have an owner handler immediately, even for an unawaited
+        // traversal. Settlement starts at most the one latest pending offer.
+        void result.then(settled, (error: unknown) => { failed('consumer', error); settled(); });
+      }
+
+      /** Offer replacement affects only future requests, never the current captured consumer. */
+      function offered(value: IOffered): void {
+        if (!mayStartConsumer()) { return; }
+        if (consumer === undefined) { consume(value); }
+        else { pending = value; }
+      }
+
+      /** Producer attribution is local to its own boundary and cannot classify a concurrent consumer error. */
+      async function produce(): Promise<void> {
+        let boundary: 'acquisition' | 'adapter' | undefined;
+        try {
+          let number = 1;
+          let current = page(number, undefined);
+          for (;;) {
+            boundary = 'acquisition';
+            const outcome = await current.result;
+            boundary = undefined;
+            if (halted) { return; }
+            if (outcome.kind === 'refused') {
+              producerTerminal(state.stopped.signal.aborted
+                ? Object.freeze({ kind: 'stopped', reason: outcome.outcome.reason })
+                : Object.freeze({ kind: 'discovery-failed', error: outcome.outcome }));
+              return;
+            }
+            if (state.stopped.signal.aborted) {
+              producerTerminal(Object.freeze({ kind: 'stopped', reason: 'Stop intent ended traversal acquisition' }));
+              return;
+            }
+            diagnostics.push(...outcome.outcome.diagnostics);
+            boundary = 'adapter';
+            const adapted = adapter.accept(outcome.page.data, previousFrontier);
+            boundary = undefined;
+            const offer = acquisition.offer(outcome.page, adapted.frontier);
+            previousFrontier = adapted.frontier;
+            if (adapted.kind === 'complete') {
+              acquisition.complete();
+              closed = true;
+              offered({ offer, ordinal: number, final: true, nextPageEntered: Promise.resolve(true) });
+              return;
+            }
+            const continuation = acquisition.continuation(outcome.page, adapted.continuation);
+            const ordinal = number;
+            number += 1;
+            current = page(number, continuation);
+            offered({ offer, ordinal, final: false, nextPageEntered: current.entered });
+          }
+        } catch (error: unknown) {
+          if (boundary === 'acquisition' && error instanceof SupervisionError && error.code === 'stopped') {
+            producerTerminal(Object.freeze({ kind: 'stopped', reason: 'Stop intent ended traversal acquisition' }));
+          } else if (boundary === 'adapter' || (boundary === 'acquisition' && error instanceof ResolutionError && !runLevelResolutionFailures.has(error.code))) {
+            producerTerminal(Object.freeze({ kind: 'discovery-failed', error }));
+          } else {
+            failed('producer', error);
+          }
+        }
+      }
+
+      let previousFrontier: object | undefined;
+      try {
+        // Drain only this coordinator's children. Waiting for the run-wide
+        // started set here would include this traversal and deadlock itself.
+        await state.track(produce);
+        while (consumer !== undefined) { await consumer.result; }
+        const first = failures[0];
+        if (first !== undefined) { throw first.error; }
+        if (terminal !== undefined) { return Object.freeze({ ...terminal, ...(lastReport === undefined ? {} : { report: lastReport }) }); }
+        if (!closed || finalReport === undefined) { throw new SupervisionError('invalid-request', 'Healthy traversal closure has no final consumer report'); }
+        return Object.freeze({ kind: 'complete', report: finalReport });
+      } finally {
+        acquisition.dispose();
+      }
+    }
     const live: IRun = Object.freeze({
       context,
       get open(): boolean {
@@ -947,6 +1254,21 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
           final: (reported) => reported.outcome.status === 'failed',
         }), 'resolveFold');
       },
+      traverse(witness: unknown, adapter: ITraversalAdapter, request: IRequestOptions): Promise<ITraversalReport> {
+        // Check the caller before within() enters this run's frame: entering
+        // first would launder a retained handle called from another live run.
+        try {
+          traversalAuthority.assertRoot();
+          // Derived page/frontier suffixes cannot legitimize an invalid caller key.
+          // Capture once before opening or owning work so every derived identity
+          // belongs to the same validated original, including accessor-backed requests.
+          const traversalRequestKey: unknown = request.requestKey;
+          if (typeof traversalRequestKey !== 'string' || traversalRequestKey.length === 0) {
+            throw new SupervisionError('invalid-request', 'A traversal request key must be a nonempty string saved by the caller');
+          }
+          return within(() => coordinateTraversal(witness, adapter, traversalRequestKey), 'traverse');
+        } catch (error: unknown) { return Promise.reject(error); }
+      },
       resolveOutcomeFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IOutcomeFoldReport> {
         return within(() => inPasses(request.requestKey, {
           pass: async (lease, requestKey) => {
@@ -972,7 +1294,9 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
             throw new SupervisionError('invalid-request', 'Ordinary work needs a nonempty label');
           }
           try {
-            notify(observers, Object.freeze({ kind: 'ordinary', runId: context.runId, label, phase: 'begin' }));
+            const event: IRunEvent = Object.freeze({ kind: 'ordinary', runId: context.runId, label, phase: 'begin' });
+            producer?.observe(event);
+            notify(observers, event);
           } catch (error: unknown) {
             throw new SupervisionError('observer-failure', `Run observer failed before ordinary work ${label}`, error);
           }
@@ -1040,16 +1364,26 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     });
 
     let value: Awaited<T>;
+    let bodyDisposition: 'returned' | 'threw' = 'returned';
+    let bodyFailure: unknown;
+    enteredBody = true;
+    producer?.phase('running');
     try {
       value = await scope.run(frame, async () => body(live));
+    } catch (error: unknown) {
+      bodyDisposition = 'threw';
+      bodyFailure = error;
+      throw error;
     } finally {
       // The body's outcome is kept; work it already started still belongs to the run.
+      producer?.phase('draining');
       await drainAndClose();
       try {
         writer.release();
       } catch (error: unknown) {
         diagnostics.push(`Run ${context.runId} could not release its writer: ${frameworkDetail(error)}`);
       }
+      producer?.close(bodyDisposition, { stop: closingStop, ...(waitingUntil === undefined ? {} : { waitingUntil }), diagnostics: diagnostics.length, interruptions: state.interruptions, failure: bodyFailure });
     }
     return Object.freeze({
       context,
@@ -1059,7 +1393,51 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       interruptions: Object.freeze([...state.interruptions]),
       waitingUntil,
     });
+    } catch (error: unknown) {
+      if (!enteredBody) {
+        if (setupStarted !== undefined) {
+          while (setupStarted.size > 0) { await Promise.all([...setupStarted]); }
+        }
+        if (setupState !== undefined) { setupState.open = false; }
+        producer?.seal();
+        try { setupUnsubscribe?.(); } catch {
+          // A failed local detach is diagnostic; it cannot replace the original setup failure.
+          diagnostics.push(`Run ${context.runId} could not end its stop subscription`);
+        }
+        try { runOptions.writer.release(); } catch (releaseError: unknown) {
+          // Releasing a setup-owned writer may fail; record its health without replacing the setup rejection.
+          diagnostics.push(`Run ${context.runId} could not release its writer: ${frameworkDetail(releaseError)}`);
+        }
+        producer?.close('not-entered', { stop: runOptions.stop?.state ?? { level: 'none', cause: undefined, deadline: undefined }, diagnostics: diagnostics.length, interruptions: setupState?.interruptions ?? [], failure: error });
+      }
+      throw error;
+    }
   }
 
-  return Object.freeze({ current, execution, run });
+  /** Existing unobserved run behavior retains its original result and rejection contract. */
+  function run<T>(runOptions: IRunOptions, body: (run: IRun) => T | Promise<T>): Promise<IRunResult<Awaited<T>>> {
+    return runInternal(runOptions, body);
+  }
+
+  /** Allocate the exact handle before the asynchronously scheduled prepared boundary. */
+  function startObserved<T>(runOptions: IRunOptions & { readonly observationLocation: string }, body: (run: IRun, application: IApplicationStatementSubmission) => T | Promise<T>): IObservedRun<Awaited<T>> {
+    const host = options.observation;
+    if (host === undefined) {
+      throw new SupervisionError('invalid-request', 'This supervisor has no observation host');
+    }
+    // Composition authority belongs to the invocation turn, before the observed run's deferred preparation.
+    const invokedDuringComposition = isComposing();
+    const producer = _createExecutionObservationProducer(host, runOptions.observationLocation);
+    const application: IApplicationStatementSubmission = Object.freeze({ submit(statement: IApplicationStatement): void { producer.submit(statement); } });
+    const result = Promise.resolve().then(() => {
+      if (invokedDuringComposition) {
+        throw new SupervisionError('composition-phase', 'A run cannot start while a composition is being constructed');
+      }
+      return runInternal(runOptions, (live) => body(live, application), producer);
+    });
+    void result.then(() => producer.settleIfNeeded(), () => producer.settleIfNeeded());
+    return Object.freeze({ locator: producer.locator, result, acknowledgment: producer.acknowledgment });
+  }
+
+  return Object.freeze({ current, execution, run, startObserved });
 }

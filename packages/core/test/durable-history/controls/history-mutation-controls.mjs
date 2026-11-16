@@ -44,7 +44,7 @@ const controls = [
   { name: 'clock high-water is ignored', file: 'index.js', anchor: 'const now = Math.max(reading, writer.timeHighWater);', replacement: 'const now = reading;' },
   { name: 'publication leaves the current pointer', file: 'index.js', anchor: 'statements.setCurrent.run(attempt.analysis, attempt.environment, attempt.subject, attemptId);', replacement: 'void 0;' },
   { name: 'attempt counter is not persisted (identities reissued)', file: 'index.js', anchor: 'statements.setAttemptSequence.run(attemptId);', replacement: 'void 0;' },
-  { name: 'exact reads ignore stored scope', file: 'index.js', anchor: 'if (row.analysis !== parts.analysis || row.environment !== parts.environment) {', replacement: 'if (false) {' },
+  { name: 'exact reads ignore stored scope', file: 'result-reference.js', anchor: 'if (row.analysis !== parts.analysis || row.environment !== parts.environment) {', replacement: 'if (false) {' },
   { name: 'stable key ignores intent on allocation', file: 'index.js', anchor: `                    const attempt = attemptOf(existing);
                     assertSameExecution(attempt, request);`, replacement: `                    const attempt = attemptOf(existing);` },
   { name: 'recovery ignores intent', file: 'index.js', anchor: `            assertSameExecution(attempt, request);

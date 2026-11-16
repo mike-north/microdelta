@@ -203,13 +203,32 @@ export class SqliteBusyError extends Error {
 }
 
 /**
+ * A host-proven refusal of SQLite inspection, including coordinated reads.
+ * Domain owners interpret the result; this class carries no schema or run meaning.
+ * @alpha
+ */
+export class SqliteReadError extends Error {
+  /** The host-evidenced reason this inspection could not proceed. */
+  public readonly code: 'absent' | 'unsupported' | 'corrupt' | 'recovery-required';
+
+  /** Preserve the host cause for diagnostics without exposing it in a reader protocol. */
+  public constructor(code: SqliteReadError['code'], message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'SqliteReadError';
+    this.code = code;
+  }
+}
+
+/**
  * Opens persistent local SQLite databases for a consumer that owns its own
  * SQL and schema, such as History's durable authority. Opening fails for a
  * directory, a missing parent directory, a file that is not a SQLite database,
  * or a location that cannot hold a persistent write-ahead-logged database,
  * including `:memory:` and the empty path. Opening never silently weakens the
- * host's durable configuration. Processes that open one new store at the same
- * time all succeed within the bounded busy wait or fail with `SqliteBusyError`.
+ * host's durable configuration. In the default open-or-create mode, processes
+ * opening one new store at the same time all succeed within the bounded busy
+ * wait or fail with `SqliteBusyError`. Exclusive creation instead refuses an
+ * existing pathname before the driver can touch its bytes or journal.
  * @alpha
  */
 export interface ISqliteCapability {
@@ -309,6 +328,37 @@ export interface ISqliteReadStatement {
   all(...values: readonly ISqliteValue[]): readonly ISqliteRow[];
 }
 
+/**
+ * One owned, finite read transaction on an existing SQLite file. Beginning is
+ * deferred: the first actual database read anchors the snapshot. Reads require
+ * a begun scope and cannot continue after end or close. End and close are
+ * independent release actions; repeating either is harmless. A scope cannot
+ * be begun again after it ends.
+ * @alpha
+ */
+export interface ISqliteCoordinatedReadScope {
+  /** Begin a deferred transaction without anchoring its snapshot. */
+  begin(): void;
+  /** Prepare a read-only statement within the live transaction. */
+  prepare(sql: string): ISqliteReadStatement;
+  /** End the transaction and relinquish its snapshot. */
+  end(): void;
+  /** Release the native handle, including after an unsuccessful end. */
+  close(): void;
+}
+
+/**
+ * Opens existing SQLite files for coordinated, finite reads. Native WAL/SHM
+ * coordination may occur; this authority never creates or initializes a store,
+ * changes journal mode, checkpoints, or grants mutation authority. The caller
+ * owns the returned scope and must attempt both end and close.
+ * @alpha
+ */
+export interface ISqliteCoordinatedReadCapability {
+  /** Open an unbegun read scope over an existing persistent file. */
+  openSqliteCoordinatedRead(location: string): ISqliteCoordinatedReadScope;
+}
+
 /** An existing rollback-journal SQLite file opened without filesystem or configuration writes. @alpha */
 export interface ISqliteReader {
   /** Prepare a read-only statement; mutation statements are refused. */
@@ -337,4 +387,39 @@ export interface ISqliteOpenOptions {
    * preflight through opening and for the lifetime of every handle.
    */
   readonly journalMode: 'wal' | 'delete';
+  /**
+   * Reserve a new pathname atomically before SQLite can open or configure it.
+   * An existing artifact, including another owner's SQLite file, is refused
+   * without mutation. If later initialization fails, the empty reserved file
+   * remains for its caller to manage rather than risking deletion of a
+   * pathname another process may have replaced.
+   */
+  readonly creation?: 'exclusive';
+}
+
+/**
+ * One command process's argument snapshot and byte-stream/status mechanics.
+ * Consumers own argument grammar, document framing and status meanings. Writing
+ * completes the supplied text or throws; selecting a status does not terminate
+ * the process or bypass its remaining cleanup. No command or domain dispatch
+ * capability is implied by this host port.
+ * @alpha
+ */
+export interface ICommandProcessCapability {
+  /** Detached arguments after the executable and entrypoint, in their original order. */
+  readonly arguments: readonly string[];
+  /** Write all supplied text to the command's standard output. */
+  writeStdout(text: string): void;
+  /** Write all supplied text to the command's standard diagnostic stream. */
+  writeStderr(text: string): void;
+  /** Select a whole exit status from 0 through 255 for natural process termination. */
+  setExitCode(code: number): void;
+  /** Resolve caller-selected local paths from the process working directory. */
+  resolvePath(path: string): string;
+  /** Load exactly one explicitly selected compiled local JavaScript module. */
+  loadModule(path: string): Promise<unknown>;
+  /** Keep the process alive until the returned release function is called. */
+  keepAlive(): () => void;
+  /** Subscribe to one process signal and return an idempotent unsubscribe function. */
+  onSignal(signal: 'SIGINT' | 'SIGTERM', listener: () => void): () => void;
 }

@@ -11,6 +11,7 @@
  * @see ../../../../docs/spec/execution.md (RES-004, RES-005, REUSE-002, REUSE-004, transition table)
  * @see ../../../../docs/plans/m3-contribution-analysis.md (Candidate eligibility and current source policy)
  */
+import { inspectProvenanceObservations } from '../provenance-wire-inspection.js';
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
 import { ResolutionError } from '@microdelta/resolution';
 
@@ -140,7 +141,7 @@ describe('current finality after restart', () => {
     world.finality['person:ada'] = 'final';
     await withSession(location, async (session) => {
       const envelope = session.history.readEnvelope({ kind: 'completed-result', locator: second });
-      const paths = (envelope.provenance.content as { readonly observations: readonly { readonly binding: { readonly path: readonly string[] } }[] }).observations.map((item) => item.binding.path.join('/'));
+      const paths = inspectProvenanceObservations(envelope.provenance.content).map((item) => item.binding.path.join('/'));
       expect(paths).toContain('previous');
       const outcome = await session.resolve(session.contributors.steps['person:ada'].activity);
       expect(outcome.kind).toBe('reused');
@@ -296,7 +297,7 @@ describe('supported provenance semantic integrity', () => {
     ['no observations at all', (record: { readonly format: string; readonly formatVersion: number; readonly content: Record<string, unknown> }) => ({ ...record, content: { ...record.content, observations: [] } })],
     ['no own implementation observation', (record: { readonly format: string; readonly formatVersion: number; readonly content: Record<string, unknown> }) => ({
       ...record,
-      content: { ...record.content, observations: (record.content.observations as { readonly binding: { readonly path: readonly string[] } }[]).filter((item) => item.binding.path[0] !== 'self') },
+      content: { ...record.content, observations: inspectProvenanceObservations(record.content).filter((item) => item.binding.path[0] !== 'self').map((item) => item.tuple) },
     })],
     ['a direct-child edge on a source', (record: { readonly format: string; readonly formatVersion: number; readonly content: Record<string, unknown> }) => ({
       ...record,

@@ -71,3 +71,5 @@ export type {
   ISupervisedExecution,
 } from './contracts.js';
 export { createResolution } from './resolution.js';
+export type { IFrontierOffer } from './frontier.js';
+export type { IAcquiredPage, IRequestSourceEvidence, IRootAcquisition, ITraversalContinuation, ITraversalPageOutcome, ITraversalPageRequest, ITraversalResolutionPort, ITraversalRunAuthority } from './root-acquisition.js';

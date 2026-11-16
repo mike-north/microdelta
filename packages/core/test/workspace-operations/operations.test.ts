@@ -35,7 +35,7 @@ import { openDurableAccounting } from '@microdelta/accounting';
 import type { IDurableAccounting } from '@microdelta/accounting';
 import { createNodeSqlite } from '@microdelta/machine-node';
 
-import { ResolutionError, SupervisionError, WriterBusyError, createStopController, openWorkspace } from '../../src/index.js';
+import { ResolutionError, SupervisionError, WriterBusyError, createStopController, openWorkspace, registerSharedRateSurface } from '../../src/index.js';
 import type { ICompletedResultReference, IMemberOutcome, IRunEvent, IWorkspace, IWorkspaceRunOptions } from '../../src/index.js';
 import { analysis, composeFixture, createWorld, installWorld } from './fixture.js';
 import type { IFixture, IHelpers, IInputs, IWorld } from './fixture.js';
@@ -391,5 +391,43 @@ describe('environments and recorded promotion (RUN-016, RUN-017)', () => {
     const refused = await workspace.run(options(trial, [], { stop }), (run) => codeOf(run.promote({ into: production, references: [trialReport], evidence: { format: 'test.promotion', formatVersion: 1, content: null } })));
     expect(refused.value).toBe('stopped');
     expect((await workspace.run(options(production), (run) => run.promotions())).value).toEqual([]);
+  });
+});
+
+
+describe('fixed shared admission in the actual facade assembly (#238)', () => {
+  test('the composed contribution caller shares one configured quantity window across members and a new workspace run', async () => {
+    // Distinct logical accounts isolate suites while this handle remains shared
+    // by the facade assembly across both workspace runs and all member paths.
+    const service = `service:${directory}`;
+    const surface = registerSharedRateSurface({ environment: production, service, accessContext: 'account:test', surface: 'contributions',
+      gates: [{ id: 'api', limit: { units: 1, intervalMilliseconds: 20, costBasis: 'quantity' } }],
+    });
+    world.sharedRate = { surface, cooldownGateId: 'api', quantityCost: 1 };
+    const first = await workspace.run(options(production), async (run) => {
+      const report = await run.resolveMembers({ template: 'pr', step: 'assess' }, key());
+      return { report, operations: await run.inspectOperations(), usage: run.usage() };
+    });
+    expect(statuses(first.value.report.members)).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+    const sent = world.provider.ledger().filter((entry) => entry.kind === 'received');
+    expect(sent).toHaveLength(3);
+    // Framework send-begin times, unlike this controlled adapter's static
+    // provider clock, demonstrate that actual host admission spaced sends.
+    expect(first.value.operations.every((view) => view.attempts.length === 1)).toBe(true);
+    expect(first.value.usage).toMatchObject({ status: 'complete', requestAttempts: 3, reports: 3 });
+    const starts: number[] = [];
+    const independent = installWorld(createWorld(() => Date.now()));
+    independent.sharedRate = world.sharedRate;
+    world = independent;
+    // A separate store forces real new work under the same shared handle.
+    const second = openWorkspace({ location: join(directory, 'second.sqlite'), logicalStore: 'store:second', accounting });
+    try {
+      const report = await second.run(options(production, [], { observers: [{ observe(event) { if (event.kind === 'send' && event.phase === 'begin') { starts.push(Date.now()); } } }] }),
+        (run) => run.resolveMembers({ template: 'pr', step: 'assess' }, key()));
+      expect(statuses(report.value.members)).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+      expect(starts).toHaveLength(3);
+      expect(starts[1]).toBeGreaterThanOrEqual((starts[0] ?? 0) + 18);
+      expect(starts[2]).toBeGreaterThanOrEqual((starts[1] ?? 0) + 18);
+    } finally { second.close(); }
   });
 });

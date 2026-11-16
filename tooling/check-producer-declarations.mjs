@@ -83,7 +83,16 @@ async function expectedDeclaration(alias, owner, filename) {
   if (!role || (alias !== packageName && !['microdelta/conformance/store', '@microdelta/history/conformance/store'].includes(alias))) {
     return null;
   }
-  const approvedEdge = !owner || role === owner || roles[owner].uses.includes(role);
+  // Supervision's owner tests exercise the real Node adapter. Their compiler
+  // and nearest ESLint project are the two exact test-only configs that may
+  // inherit its alpha declaration; production configs remain forbidden even
+  // when they extend either test project.
+  const ownerTestHost = owner === 'supervision' && role === 'machine-node'
+    && [
+      `${path.sep}packages${path.sep}supervision${path.sep}tsconfig.test.json`,
+      `${path.sep}packages${path.sep}supervision${path.sep}test${path.sep}tsconfig.json`,
+    ].some(testConfig => filename.endsWith(testConfig));
+  const approvedEdge = !owner || role === owner || roles[owner].uses.includes(role) || ownerTestHost;
   if (!approvedEdge && (publicConsumer || !(await declarationClosure(owner)).has(role))) {
     return null;
   }

@@ -46,9 +46,12 @@ export {
   type ISourceDeclaration,
   type ISourceOptions,
   type ISourceRunContext,
+  type ISourceEvidenceSupplier,
   type IStepDeclaration,
 } from './declaration.js';
+export type { ISourceSlotBrand, IAnySourceSlot, ISourceSlot, IAnySuppliedSourceDeclaration, ISuppliedSourceDeclaration, ISuppliedSourceOptions, ISupplySourceOptions, ISuppliedSourceRegistration, ISuppliedSourceRunContext, ISuppliedSourceFinalityContext, ISourceArgumentSupplier, ISourcePreviousSupplier } from './source-slot.js';
 export { declarations, type IDeclarations } from './declarations.js';
+export type { IRootAcquisitionWitness, ITraversalBinding, ITraversalDeclaration, ITraversalOptions } from './traversal.js';
 export {
   gateOutcome,
   type IAnyTemplateDeclaration,
@@ -112,6 +115,7 @@ export {
   type IStepRegistration,
   type IStepTarget,
   type ISuppliedStepTarget,
+  type ISuppliedSourceTarget,
   type ITopology,
   type IWitnessResolution,
   isComposing,
@@ -217,3 +221,5 @@ export function nameOf(fn: Function, override?: string): string | undefined {
     return undefined;
   }
 }
+
+export type { ISuppliedSourceInvocation, ISuppliedSourceCallRequest } from './invocation.js';

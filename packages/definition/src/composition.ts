@@ -37,10 +37,13 @@ import { reject } from './declaration.js';
 import type { DefinitionError } from './errors.js';
 import type { IBindingFamily } from './family.js';
 import type { IFoldTopology } from './fold.js';
+import type { IAnySuppliedSourceDeclaration, ISuppliedSourceRegistration } from './source-slot.js';
 import type { IAnySuppliedStepDeclaration, ISuppliedStepRegistration } from './slot.js';
 import { slotSubject, supplyState } from './slot.js';
 import { bindTemplates, instancePrefixOf, isMemberStep, type IAnyTemplateDeclaration, type IBoundTemplates, type ITemplateRecords, type ITemplateTopology } from './template.js';
 import { copyDescriptor, isTemplateDescriptor, parseWitness } from './witness.js';
+import { bindTraversals } from './traversal.js';
+import type { ITraversalBinding, ITraversalDeclaration, ITraversalRecords } from './traversal.js';
 import type { IInvocationArguments, IInvocationWitness, IUnsupportedWitnessReason } from './witness.js';
 
 /**
@@ -105,10 +108,12 @@ export interface ICompositionOptions<TFamily extends IBindingFamily> {
   readonly steps?: readonly IStepRegistration<TFamily>[];
   /** Explicitly keyed members. */
   readonly members?: readonly IMemberRegistration<TFamily>[];
-  /** Supplied step implementations bound to callable step slots, made by `supply`. */
-  readonly supplied?: readonly ISuppliedStepRegistration<TFamily>[];
+  /** Memo or source implementations bound to their matching callable slots by `supply` or `supplySource`. */
+  readonly supplied?: readonly (ISuppliedStepRegistration<TFamily> | ISuppliedSourceRegistration<TFamily>)[];
   /** Fanout templates, each bound to a keyed collection source among the composition-level steps. */
   readonly templates?: readonly IAnyTemplateDeclaration<TFamily>[];
+  /** One selected root acquisition relationship, composed before any run authority exists. */
+  readonly traversals?: readonly ITraversalDeclaration<TFamily>[];
 }
 
 /**
@@ -159,6 +164,23 @@ export interface ISuppliedStepTarget<TFamily extends IBindingFamily> {
   subjectFor(arguments_: IInvocationArguments): IScopedSubject;
 }
 
+/** A current source slot binding keeps source policy distinct from memo semantics. @alpha */
+export interface ISuppliedSourceTarget<TFamily extends IBindingFamily> {
+  /** Supplied step slots share the callable slot namespace with helpers. */
+  readonly role: 'callable';
+  /** Keeps current source policy distinct from a helper or a memo implementation. */
+  readonly kind: 'supplied-source';
+  /** The supplied implementation, with its callback context erased. */
+  readonly declaration: IAnySuppliedSourceDeclaration<TFamily>;
+  /**
+   * The scoped history subject of one call through this slot, computed by the
+   * bound subject function from the recipes' derived values only. It runs the
+   * author's subject function and rejects with `invalid-subject` unless that
+   * returns a complete nonempty string.
+   */
+  subjectFor(arguments_: IInvocationArguments): IScopedSubject;
+}
+
 /** The current declaration bound to a step slot; invoke it through `openInvocation`. @alpha */
 export interface IStepTarget<TFamily extends IBindingFamily> {
   readonly role: 'step';
@@ -169,7 +191,7 @@ export interface IStepTarget<TFamily extends IBindingFamily> {
 }
 
 /** Whatever a uniquely occupied slot currently denotes. @alpha */
-export type IBindingTarget<TFamily extends IBindingFamily> = IInputTarget | ICallableTarget | ISuppliedStepTarget<TFamily> | IStepTarget<TFamily>;
+export type IBindingTarget<TFamily extends IBindingFamily> = IInputTarget | ICallableTarget | ISuppliedStepTarget<TFamily> | ISuppliedSourceTarget<TFamily> | IStepTarget<TFamily>;
 
 /**
  * Outcome of resolving one descriptor against the current composition.
@@ -204,7 +226,7 @@ export interface ITopology {
   readonly inputs: readonly string[];
   /** Declared callable (helper) slot names, sorted; a repeated slot appears once. */
   readonly helpers: readonly string[];
-  /** Supplied step slot names that some parent declares, sorted, whether or not they are currently supplied. */
+  /** Supplied slot names declared by a parent or root traversal, sorted, whether or not currently supplied. */
   readonly slots: readonly string[];
   /** Fanout templates, sorted by template slot. */
   readonly templates: readonly ITemplateTopology[];
@@ -212,6 +234,8 @@ export interface ITopology {
   readonly folds: readonly IFoldTopology[];
   /** Outcome (tolerant) folds and the template steps they consume, in structural order. */
   readonly outcomeFolds: readonly IFoldTopology[];
+  /** Fixed root acquisition correspondence; each binding has exactly one query and strict consumer. */
+  readonly traversals: readonly ITraversalBinding[];
 }
 
 /**
@@ -226,7 +250,7 @@ export type IWitnessResolution<TFamily extends IBindingFamily> =
   | {
     readonly status: 'bound';
     readonly parent: IStepTarget<TFamily>;
-    readonly child: IStepTarget<TFamily> | ISuppliedStepTarget<TFamily>;
+    readonly child: IStepTarget<TFamily> | ISuppliedStepTarget<TFamily> | ISuppliedSourceTarget<TFamily>;
     readonly witness: IInvocationWitness;
   }
   | { readonly status: 'missing'; readonly descriptor: IBindingDescriptor }
@@ -275,6 +299,8 @@ export interface ICompositionState<TFamily extends IBindingFamily> {
   readonly templates: IBoundTemplates<TFamily>;
   /** The template step descriptor each strict or outcome fold consumes, by the fold's descriptor key. */
   readonly folds: ReadonlyMap<string, IBindingDescriptor>;
+  /** Genuine declared relationship tokens mapped to their unique frozen participants. */
+  readonly traversals: ReadonlyMap<object, ITraversalBinding>;
 }
 
 /** Nonzero while a composition is being constructed; framework resolution must reject then. */
@@ -338,6 +364,7 @@ export function composeIn<TFamily extends IBindingFamily>(
   compositions: WeakMap<object, ICompositionState<TFamily>>,
   options: ICompositionOptions<TFamily>,
   templates: ITemplateRecords<TFamily>,
+  traversals: ITraversalRecords<TFamily>,
 ): IComposition<TFamily> {
   composing++;
   try {
@@ -352,6 +379,7 @@ export function composeIn<TFamily extends IBindingFamily>(
       members: 'invalid-descriptor',
       supplied: 'invalid-descriptor',
       templates: 'invalid-descriptor',
+      traversals: 'invalid-descriptor',
     });
     const scope = nonempty(optionFields.get('scope'), 'scope');
     const registrations = new Map<string, IRegistration<TFamily>[]>();
@@ -410,7 +438,7 @@ export function composeIn<TFamily extends IBindingFamily>(
         if (record === undefined) {
           return reject('forged-declaration', `Step ${slot} holds a declaration this family did not mint.`);
         }
-        if (record.kind === 'supplied-step') {
+        if (record.kind === 'supplied-step' || record.kind === 'supplied-source') {
           return reject('illegal-edge', `Step ${slot} holds a supplied step; supplied steps occupy step slots only through supply.`);
         }
         if (isMemberStep(record.declaration)) {
@@ -469,15 +497,12 @@ export function composeIn<TFamily extends IBindingFamily>(
     for (const supplied of listOf(optionFields.get('supplied'), 'supplied', true)) {
       const state = supplyState(supplied);
       const record = state === undefined ? undefined : records.get(state.declaration);
-      if (state === undefined || record?.kind !== 'supplied-step') {
+      if (state === undefined || (record?.kind !== 'supplied-step' && record?.kind !== 'supplied-source')) {
         return reject('forged-declaration', 'A supplied registration must be made by supply from this family instance.');
       }
       suppliedSlots.add(state.slot);
       const subject = state.subject;
-      const target: ISuppliedStepTarget<TFamily> = {
-        role: 'callable',
-        kind: 'supplied-step',
-        declaration: record.declaration,
+      const subjectBinding = {
         subjectFor(arguments_: IInvocationArguments): IScopedSubject {
           if (isComposing()) {
             reject('composition-phase', 'Slot subjects cannot be computed while composing.');
@@ -494,6 +519,9 @@ export function composeIn<TFamily extends IBindingFamily>(
           return scoped;
         },
       };
+      const target: ISuppliedStepTarget<TFamily> | ISuppliedSourceTarget<TFamily> = record.kind === 'supplied-source'
+        ? { ...subjectBinding, role: 'callable', kind: 'supplied-source', declaration: record.declaration }
+        : { ...subjectBinding, role: 'callable', kind: 'supplied-step', declaration: record.declaration };
       register(slotDescriptor(scope, state.slot), { target: Object.freeze(target), record });
     }
     const boundTemplates = bindTemplates(
@@ -524,6 +552,16 @@ export function composeIn<TFamily extends IBindingFamily>(
         reject('illegal-edge', `Callable slot ${slot} is declared as a supplied step slot and also registered as a helper.`);
       }
     }
+    const traversalBindings = bindTraversals(traversals, listOf(optionFields.get('traversals'), 'traversals', true), {
+      scope, steps: compositionSteps, templates: boundTemplates,
+      target: (descriptor) => {
+        const occupants = registrations.get(descriptorKey(descriptor)) ?? [];
+        return occupants.length === 1 ? occupants[0]?.target : undefined;
+      },
+    });
+    for (const binding of traversalBindings.values()) {
+      declaredSlots.add(binding.page.slot);
+    }
     const topology: ITopology = Object.freeze({
       steps: Object.freeze([...steps].sort(compareDescriptors)),
       edges: Object.freeze([...edges].sort((left, right) => compareDescriptors(left.parent, right.parent) || compareDescriptors(left.child, right.child))),
@@ -533,6 +571,7 @@ export function composeIn<TFamily extends IBindingFamily>(
       templates: boundTemplates.topology,
       folds: Object.freeze(foldTopology.sort((left, right) => compareDescriptors(left.fold, right.fold))),
       outcomeFolds: Object.freeze(outcomeFoldTopology.sort((left, right) => compareDescriptors(left.fold, right.fold))),
+      traversals: Object.freeze([...traversalBindings.values()]),
     });
     const frozenRegistrations: ReadonlyMap<string, readonly IRegistration<TFamily>[]> = new Map(
       [...registrations].map(([key, occupants]) => [key, Object.freeze(occupants)]),
@@ -594,7 +633,11 @@ export function composeIn<TFamily extends IBindingFamily>(
             ? { status: 'bound', parent: parentTarget, child: childTarget, witness: parsed.witness }
             : { status: 'unsupported', reason: 'argument-form' };
         }
-        if (childTarget.role !== 'callable' || childTarget.kind !== 'supplied-step') {
+        if (childTarget.role !== 'callable' || (childTarget.kind !== 'supplied-step' && childTarget.kind !== 'supplied-source')) {
+          return { status: 'undeclared-edge' };
+        }
+        const parentRecord = records.get(parentTarget.declaration);
+        if (parentRecord?.kind !== 'memo' || ![...parentRecord.children.values()].some(edge => edge.kind === 'slot' && edge.slot === child.slot && edge.source === (childTarget.declaration.kind === 'supplied-source'))) {
           return { status: 'undeclared-edge' };
         }
         if (!isTemplateDescriptor(parent) && !('form' in recipes) && recipes.some(recipe => recipe.form === 'forwarded' && recipe.origin.binding === 'member')) {
@@ -612,7 +655,7 @@ export function composeIn<TFamily extends IBindingFamily>(
       },
     };
     Object.freeze(composition);
-    compositions.set(composition, { scope, registrations: frozenRegistrations, templates: boundTemplates, folds });
+    compositions.set(composition, { scope, registrations: frozenRegistrations, templates: boundTemplates, folds, traversals: traversalBindings });
     // The brand is type-level only; this module is its sole minting authority.
     return composition as IComposition<TFamily>;
   } finally {

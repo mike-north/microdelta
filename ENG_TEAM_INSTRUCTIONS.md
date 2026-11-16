@@ -30,7 +30,8 @@ priority, and progress. Repository issues contain the implementation contract;
    assistance. Use `Refs #N`; the supervisor closes the issue after acceptance.
 7. Implementers stop at PR-open and report its URL to the supervisor. Further edits
    follow a scoped review request. Release/Version PRs remain under human control:
-   merging one publishes to npm, so a human maintainer records its exact-head
+   merging one initiates publication after exact main integration, so a human
+   maintainer records its exact-head
    status with the [release review](docs/supervisor-review.md#release-review-for-the-version-packages-pr)
    and merges it manually; it is never auto-merged.
 8. The supervisor reviews the current commit, checks required CI and declaration
@@ -57,10 +58,19 @@ priority, and progress. Repository issues contain the implementation contract;
 10. Only the supervisor merges accepted work. Merge authority is delegated by the
    repository owner; it does not authorize bypassing checks, force-pushing the
    default branch, publishing packages, or changing secrets and visibility.
-11. After merge, verify the default-branch result, close fully satisfied issues,
-    release claims, update project fields, and unblock only dependencies actually met.
-    Pass, reject, or inconclusive experiment results must state their evidence and
-    the next decision; an inconclusive mechanism is not an adopted implementation.
+11. Passing PR checks do not require merging the latest `main` first. After a
+    merge, verify the default-branch integration build (`npm run check`,
+    `npm test`, and `npm run build`) and repair failures with tests-first changes
+    and independent review. Retain the merged-branch worktree until this
+    verification is complete so it can be used for repairs. A pending default-
+    branch run does not block starting the next ready issue: use a separate
+    worktree, and return to repair only if integration fails. A merged
+    prerequisite may unblock its dependent issues while this build is pending;
+    next ready work uses a separate worktree. Close fully satisfied issues,
+    release claims, update project fields, and unblock only dependencies actually
+    met. Pass, reject, or inconclusive experiment results
+    must state their evidence and the next decision; an inconclusive mechanism is
+    not an adopted implementation.
 
 Use lower-cost agents for contained coding and test work. Keep architecture,
 normative specification changes, evidence assessment, and merge decisions with
@@ -91,18 +101,41 @@ content or untouched placeholders. It is intentionally separate from `npm run
 check`: push-only baseline CI has no PR body. Its tests are included in `npm test`.
 Local validation and hooks do not replace the required PR workflow.
 
-The exact intended required contexts on `main` are **PR metadata**, **core (22)**,
-**core (24)**, and the separately published **Supervisor review** commit status.
-The three Actions checks retain their GitHub Actions source restrictions; the
-supervisor status is an additional exact-head review gate. Each of the two core
-jobs runs `npm ci`, `npm run check`, `npm test`, and `npm run build`.
-Require a pull request, passing required checks on an up-to-date base, resolved
-review conversations, and administrator enforcement without bypass entries.
+The exact intended required contexts on `main` are **PR metadata**, **core (24)**,
+and the separately published **Supervisor review** commit status.
+The two Actions checks retain their GitHub Actions source restrictions; the
+supervisor status is an additional exact-head review gate. The supported Node baseline is 24 or later, declared by the root development
+engine and every workspace package. Ordinary PRs prepare once and run four
+isolated serial test shards; their **core (24)** aggregate requires preparation,
+all four shards and complete current-attempt coverage receipts. Feature branches
+receive automatic coverage when their PR opens or updates, without a duplicate
+feature-push run. The main-push and manually dispatched Check job still runs
+`npm ci`, `npm run check`, `npm test`, and `npm run build`. See the
+[PR CI contract and rerun-all recovery](docs/pr-ci.md).
+For an actual Version Packages merge, release packaging and publication must wait
+for that existing main-push Check to succeed on the exact merge commit on
+Node 24, including all four command steps. Retired Node 22 evidence is neither
+required nor a substitute for the supported job. Version-PR preparation stays
+independent. The release gate observes this Check rather than starting a duplicate
+integration run; its bounded wait and the publisher's fresh per-package assertion
+are specified in [releasing.md](docs/releasing.md#publishing-after-the-release-decision).
+Failed, invalid, unavailable or timed-out integration never authorizes release;
+resolve Check and rerun the original eligible release run instead of creating a
+synthetic release or bypassing the gate.
+Require a pull request, passing required checks, resolved review conversations,
+and administrator enforcement for ordinary protections. Branch freshness is
+intentionally not a merge requirement; the default-branch integration build is
+verified and repaired after merge.
+The repository owner may bypass only the dedicated Supervisor review status
+ruleset; agents always follow the normal protected review and merge path and never
+request administrator bypass. The checker verifies that the bypass scope contains
+only that status, regardless of ruleset name or ID.
 `main` is governed by repository ruleset 24154977 rather than legacy branch
 protection. The supervisor-review command reads both sources read-only: a
-requirement holds if either enforces it, and administrator enforcement requires
-every contributing ruleset to be `active` with no bypass actors. The ruleset's
-Copilot review does not re-review on push, by design: the gate is a completed
+requirement holds if either enforces it, while each source for ordinary protection
+must be active and apply to administrators. Only the separate Supervisor review
+status source may carry the repository owner's dedicated always or pull-request-only
+bypass actor. The ruleset's Copilot review does not re-review on push, by design: the gate is a completed
 Copilot review on some commit in the pull request (step 9). These settings are not evidence by themselves
 that live protection is configured; the supervisor reads back the live rule,
 recording the result or a specific platform limitation in the governing issue
@@ -117,7 +150,7 @@ has moved it fails closed. The workflow never interpolates PR text into shell,
 installs dependencies, or uses `pull_request_target`. Normal `pull_request`
 execution runs the proposed checker, with no write permission; the supervisor
 must review changes to workflows and enforcement code before merging them.
-The ordinary push workflow remains unchanged and needs no PR payload.
+The main-push full Check job needs no PR payload and retains its four steps.
 
 GitHub schedules these checks asynchronously. After a body edit, wait for its
 new metadata run; do not merge against an earlier success while the replacement
@@ -131,7 +164,7 @@ Implementers continue to stop at PR-open.
 
 When retiring a CI matrix job, first verify that both legacy protection and every
 active contributing ruleset no longer require its context while all retained
-contexts, source restrictions, strictness, PR/review rules and administrator
+contexts, source restrictions, PR/review rules and administrator
 enforcement remain in force. Remove only that obsolete requirement while the
 old job still runs, then read protection back before merging the workflow change.
 If the obsolete context remains required, stop: removing its job would leave a

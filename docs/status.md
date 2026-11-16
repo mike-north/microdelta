@@ -42,9 +42,19 @@ analyses are safe.
   establish distributed operation, power-loss safety, lease-wait fairness or
   production readiness. See [execution](spec/execution.md) and the
   [M5 record](validation/m5-2026-10-01.md).
-- **Multi-writer parallelism, the general CLI, the read-only inspection
-  checkpoint, full workflow and scale acceptance, and real-provider
-  acceptance are not delivered.** Each is a later milestone in
+- **The command line is partial.** The installed `microdelta` executable's
+  bounded foreground run-start and finite exact-execution observation
+  ([CLI-005](spec/operations.md#cli-005--bounded-exact-execution-observation))
+  have checkout and local-build evidence, recorded on
+  [issue 294](https://github.com/mike-north/microdelta/issues/294#issuecomment-6462080386)
+  as a two-person controlled proof. That evidence does not publish a new
+  package version or expose the alpha declarations, and the proof's private
+  fixture outcome files are not a supported report export format. The run-start
+  path does not serialize the application's report; caller code owns report
+  presentation and can read the exact immutable result during the run. The
+  general inspection checkpoint (CLI-001 to CLI-004, M6) remains open.
+- **Multi-writer parallelism, full workflow and scale acceptance (M7), and
+  real-provider acceptance are not delivered.** Each is a later milestone in
   [milestones](milestones.md).
 - **The acquisition retry and rate target** accepted on 2026-10-24
   ([data-acquisition retries](plans/data-acquisition-retries.md)) supersedes

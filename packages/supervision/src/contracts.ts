@@ -11,13 +11,16 @@
  * the fan-out window, and the operator's stop intent as it reaches admission,
  * bodies, sends, waits and the publication commit. It does not decide reuse
  * (Reuse Resolution), own claims or publication (Result History), or read the
- * host directly: the asynchronous scope and the timer are structurally
- * injected capabilities, so this package has no Machine import and ordinary
- * author helpers receive no context parameter. A run is not a retained
+ * host directly: the asynchronous scope and timer are structurally injected;
+ * optional exact observation takes Machine's storage, clocks and reader only
+ * through an assembly-supplied port. Ordinary author helpers receive no
+ * context parameter. A run is not a retained
  * result; its identifier is volatile metadata and never participates in reuse
  * evidence.
  */
-import type { IBindingDescriptor } from '@microdelta/definition';
+import type { IBindingDescriptor, IBindingFamily, IRootAcquisitionWitness } from '@microdelta/definition';
+import type { IApplicationStatementSubmission, IExecutionObservationHost, IObservedRun } from './observation.js';
+import type { ISourceRetryPolicy } from './operations.js';
 import type {
   ICheckOutcome,
   IDiscoveryOutcome,
@@ -34,10 +37,12 @@ import type {
   IResolution,
   IResolutionOutcome,
   IResolveRequest,
+  ITraversalRunAuthority,
   ResolutionError,
 } from '@microdelta/resolution';
 
 import type { IAbortSignal, IRunTimer, IStopController, IStopLevel, IStopState } from './control.js';
+import type { ISharedRateDispatchOptions } from './shared-rate-dispatch.js';
 import type {
   IDeferralMode,
   IOperationBlock,
@@ -77,6 +82,10 @@ export interface IRunScopeCapability {
 
 /** Construction options of Run Supervision. @alpha */
 export interface ISupervisionOptions {
+  /** Host capabilities for opt-in exact execution observation. */
+  readonly observation?: IExecutionObservationHost;
+  /** Assembly-owned fixed admission shared by this supervisor's runs and composed peers. */
+  readonly sharedRates?: ISharedRateDispatchOptions;
   /** The structurally injected scope capability. */
   readonly context: IRunScopeCapability;
   /**
@@ -213,6 +222,8 @@ export interface IWriterWaitOptions {
  * @alpha
  */
 export interface IResolutionPorts {
+  /** Live root authority for the fixed declared traversal; never parent invocation authority. */
+  readonly traversalAuthority: ITraversalRunAuthority;
   /**
    * Admission of work current validation could not avoid. Stop intent
    * cancels it, except that during a soft stop's drain the first attempt of a
@@ -352,6 +363,8 @@ export interface IRunOptions {
    * consults no operation records. They need the Supervision's timer.
    */
   readonly operations?: IRunOperationPorts;
+  /** Exact-scoped reusable source classifiers; matches replace defaults but never grant retries. */
+  readonly retryPolicies?: readonly ISourceRetryPolicy[];
   /**
    * How the run treats work deferred until a later time once only deferred
    * work remains: `sleep` (the default) releases the writer lease, waits and
@@ -656,6 +669,8 @@ export interface IRun {
    * no body, admits no fold work and publishes nothing.
    */
   resolveFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IFoldReport>;
+  /** Coordinate one fixed root relationship inside this run's ordinary policies and owned lifetime. */
+  traverse<TFamily extends IBindingFamily>(witness: IRootAcquisitionWitness<TFamily>, adapter: ITraversalAdapter, request: IRequestOptions): Promise<ITraversalReport>;
   /**
    * Resolve one outcome (tolerant) fold and report it: every current member
    * of the consumed template step progresses independently first; then,
@@ -750,11 +765,39 @@ export type IRunOperationName =
   | 'recover'
   | 'resolve'
   | 'resolveFold'
+  | 'traverse'
   | 'resolveMembers'
   | 'resolveOutcomeFold'
   | 'settleOperation'
   | 'promote'
   | 'promotions';
+
+/**
+ * A pure response adapter selects the next immutable collection evidence and
+ * an advertised continuation field path. It receives no transport, raw root
+ * argument or current-run capability, and cannot certify library membership.
+ * @alpha
+ */
+export interface ITraversalAdapter {
+  accept(page: object, previousFrontier: object | undefined): ITraversalAdaptation;
+}
+
+/** One accepted page either advertises another cursor or closes discovery. @alpha */
+export type ITraversalAdaptation =
+  | { readonly kind: 'continue'; readonly frontier: object; readonly continuation: readonly string[] }
+  | { readonly kind: 'complete'; readonly frontier: object };
+
+/**
+ * Acquisition's terminal result is separate from each immutable strict-fold
+ * report. Healthy closed discovery does not upgrade a denied, failed or
+ * waiting fold into successful completion. Producer failure preserves its
+ * original cause and any last request report without rewriting that report.
+ * @alpha
+ */
+export type ITraversalReport =
+  | { readonly kind: 'complete'; readonly report: IFoldReport }
+  | { readonly kind: 'discovery-failed'; readonly error: unknown; readonly report?: IFoldReport }
+  | { readonly kind: 'stopped'; readonly reason: string; readonly report?: IFoldReport };
 
 /**
  * A send a hard stop aborted, with its recorded remote state.
@@ -786,7 +829,8 @@ export interface IRunResult<T> {
   readonly interruptions: readonly ISendInterruption[];
   /**
    * The earliest "not before" time of deferred work the run left waiting, when
-   * it returned without it: in exit mode, or because a stop ended the wait.
+   * it returned without it: in exit mode, because a stop ended the wait, or
+   * because a terminal failed request left independent deferred siblings.
    * Undefined when no deferred work was left waiting. A later run honors it.
    * A pass waking from the wait takes the writer lease as any normal request
    * does, so another holder makes it wait (under `writerWait`), never return
@@ -921,6 +965,14 @@ export interface IRunExecution {
  * @alpha
  */
 export interface ISupervision {
+  /**
+   * Start an observed run and return its exact locator, result and independent
+   * durability receipt before it settles. A missing observation host refuses
+   * synchronously with `invalid-request`, before a handle or execution identity
+   * exists. After a handle is returned, run-path failures reject `result` and
+   * the separate acknowledgment reports what is known about durable evidence.
+   */
+  startObserved<T>(options: IRunOptions & { readonly observationLocation: string }, body: (run: IRun, application: IApplicationStatementSubmission) => T | Promise<T>): IObservedRun<Awaited<T>>;
   /**
    * The live run's context in the current asynchronous execution. Fails with
    * `outside-run`, `run-closed` or `composition-phase` rather than guessing.

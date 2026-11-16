@@ -1,6 +1,6 @@
 {
   "name": "@microdelta/machine",
-  "version": "0.3.0",
+  "version": "0.5.0",
   "description": "Portable host capability contracts",
   "license": "UNLICENSED",
   "repository": {
@@ -10,7 +10,7 @@
   },
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "main": "./dist/src/index.js",
   "types": "./dist/api/machine.public.d.ts",

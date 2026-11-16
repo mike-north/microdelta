@@ -13,14 +13,22 @@ import { fileURLToPath } from 'node:url';
 export type IContentionLockScenario =
   | 'no-ready'
   | 'unexpected-ready'
+  | 'delayed-unexpected-ready'
   | 'exit-before-ready'
   | 'ignore-release'
   | 'exit-nonzero-after-release'
   | 'signal-after-release';
 
-/** Narrow test seams for exercising bounded helper failures without delaying normal C3 runs. */
+/**
+ * Narrow test seams for exercising bounded helper failures without delaying normal C3 runs.
+ * Startup readiness has its own budget so a short release-failure bound cannot hide a worker that
+ * never reached the locked phase.
+ */
 export interface IContentionLockOptions {
   readonly scenario?: IContentionLockScenario;
+  /** Bounds only how long the parent waits for the separate process to establish its lock. */
+  readonly startupTimeoutMilliseconds?: number;
+  /** Bounds release and ordinary failure cleanup after readiness has been established. */
   readonly timeoutMilliseconds?: number;
 }
 
@@ -115,7 +123,9 @@ function requestRelease(child: ChildProcess, timeoutMilliseconds: number, diagno
 
 /**
  * Start the real lock-holder process, invoke `operation` only after lock
- * readiness, and release/reap the child on success and every failure path.
+ * readiness, and release/reap the child on success and every failure path. The independent
+ * startup deadline preserves enough time for process/module initialization while the shorter
+ * release deadline remains available to exercise intentionally stuck holders.
  * Scenario modes and shorter bounds are restricted to this harness's cleanup tests.
  */
 export async function withIndependentWriteLock<T>(
@@ -124,6 +134,7 @@ export async function withIndependentWriteLock<T>(
   options: IContentionLockOptions = {},
 ): Promise<T> {
   const timeoutMilliseconds = options.timeoutMilliseconds ?? 10_000;
+  const startupTimeoutMilliseconds = options.startupTimeoutMilliseconds ?? 10_000;
   const worker = options.scenario === undefined ? ordinaryWorker : scenarioWorker;
   const args = options.scenario === undefined ? [location] : [location, options.scenario];
   const child = fork(worker, args, { stdio: ['ignore', 'ignore', 'pipe', 'ipc'] });
@@ -140,7 +151,7 @@ export async function withIndependentWriteLock<T>(
   let releaseFailed = false;
   let hasOriginalFailure = false;
   try {
-    await waitForLockReady(child, timeoutMilliseconds, diagnostic);
+    await waitForLockReady(child, startupTimeoutMilliseconds, diagnostic);
     ready = true;
     const result = await operation();
     try {

@@ -73,18 +73,16 @@ import {
   HistoryIntegrityError,
   StaleWriterError,
 } from './errors.js';
-import { parseReference, referenceFor } from './locator.js';
+import { referenceFor } from './locator.js';
 import { createJournalStore } from './journal.js';
 import { historyScope, integer, loadRecord, requireName, requireNonnegative, requirePositive, safeSum, storeRecord, text } from './records.js';
 import { initializeSchema } from './schema.js';
+import { completedResultQuery, payloadEncoding, resolveCompletedResult } from './result-reference.js';
 import { isHistorySqliteBoundaryBusy, openHistorySqlite } from './sqlite-boundary.js';
 import { buildIndex, createSelectedIndex, indexVersion } from './selected-index.js';
 
 /** Identity tag for embedded SQL; the text is passed through unchanged. */
 const sql = String.raw;
-
-/** The only payload encoding History stores for completed results. */
-const payloadEncoding = 'MDS1';
 
 /** The durable writer row. */
 interface IWriterRow {
@@ -179,8 +177,7 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
     abandonAttempt: connection.prepare(sql`/* abandon */ UPDATE history_attempts
       SET state = ?, ended_fence = ?, outcome_format = ?, outcome_version = ?, outcome = ?
       WHERE attempt_id = ? AND state IN ('allocated', 'staged')`),
-    reference: connection.prepare(sql`/* reference */ SELECT r.result_id, r.analysis, r.environment, r.encoding, r.index_version, a.state
-      FROM history_results r LEFT JOIN history_attempts a ON a.attempt_id = r.result_id WHERE r.result_id = ?`),
+    reference: connection.prepare(completedResultQuery),
     envelope: connection.prepare(sql`/* envelope */ SELECT result_id, analysis, environment, subject, version, publication, encoding, index_version,
       provenance_format, provenance_version, provenance FROM history_results WHERE result_id = ?`),
     // The local arm seeks the complete subject index. The promotion arm must
@@ -237,27 +234,7 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
    * integrity failure; the current pointer is never consulted.
    */
   function resolveResult(reference: ICompletedResultReference, expectedScope?: IHistoryScope): { readonly resultId: number; readonly scope: IHistoryScope } {
-    const parts = parseReference(reference);
-    if (parts.logicalStore !== logicalStore) {
-      throw new HistoryIntegrityError('Completed-result reference belongs to a different logical store');
-    }
-    if (expectedScope !== undefined && (parts.analysis !== expectedScope.analysis || parts.environment !== expectedScope.environment)) {
-      throw new HistoryIntegrityError('Completed-result reference belongs to a different analysis or environment');
-    }
-    const row = statements.reference.get(parts.resultId);
-    if (row === undefined) {
-      throw new HistoryIntegrityError(`Missing exact completed result ${reference.locator}`);
-    }
-    if (row.analysis !== parts.analysis || row.environment !== parts.environment) {
-      throw new HistoryIntegrityError('Completed-result reference scope does not match the stored result');
-    }
-    if (row.encoding !== payloadEncoding || row.index_version !== indexVersion) {
-      throw new HistoryIntegrityError(`Stored result uses unsupported encoding ${String(row.encoding)} or index version ${String(row.index_version)}`);
-    }
-    if (row.state !== 'completed') {
-      throw new HistoryIntegrityError('Stored result is not backed by a completed attempt');
-    }
-    return { resultId: parts.resultId, scope: { analysis: parts.analysis, environment: parts.environment } };
+    return resolveCompletedResult(reference, logicalStore, (resultId) => statements.reference.get(resultId), expectedScope);
   }
 
   const index = duringOpening(() => createSelectedIndex(connection, options.sha256, (reference) => resolveResult(reference).resultId));

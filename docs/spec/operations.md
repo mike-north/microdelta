@@ -871,6 +871,119 @@ invariants; they select no universal cap, credentials DSL or paid strategy.
 
 ## CLI and read-side delivery
 
+### CLI-005 — Bounded exact-execution observation
+
+**Status:** accepted common engineering contract under root supervisory selection
+on 2026-10-25 after independent adversarial review. This does not attribute
+engineering-mechanism selection to the product owner and does not claim runtime
+delivery, full CLI-001–004, or M6/M7 acceptance. Implementation may begin after
+this contract is merged and its supervisor-owned child issue is issued.
+
+The first contribution-report CLI slice MUST start one workflow execution and
+allow a separately permissionable, read-only reader to inspect that exact
+execution. This slice supplies only exact-execution progress and terminal
+observation; it does not satisfy the broader CLI-001–004 read-side family or M6.
+The selected product scope is recorded by the #167 owner decision. Root accepted
+the bounded engineering contract below as supervisory architecture selection
+under ENG after independent review; this does not claim that the owner selected
+these mechanisms. The concrete workflow and report classification belong to the
+application assembly (#240).
+
+**Identity and storage.** Supervision MUST mint a fresh bounded execution identity for every invocation,
+independent of a reusable public `runId`, and return an explicit locator. The record identifies the analysis and environment, may retain
+the public `runId` for correlation, and carries a monotonically committed
+revision and sample time. Sample time dates the facts sampled; it is not a
+heartbeat, liveness proof or report-freshness claim. It owns one bounded latest-observation artifact per execution, using the existing
+Machine delete-journal publication and read-only capabilities.
+Creation MUST NOT overwrite a different execution. The locator and all stored
+identifiers have explicit finite size limits. The artifact has no global catalog,
+TTL, automatic cleanup or per-PR/event ledger. History's WAL journal is not an
+observation store; the reader MUST NOT open writable History as fallback or
+perform hot-journal recovery. Reading accepts only the exact locator and returns
+one coherent revision, or an explicit absent, identity-mismatch,
+unsupported, corrupt, busy, unavailable or recovery-required result. It has no
+write, initialization, recovery, execution, claim, retry, cancellation, callback
+or control capability. A read that faithfully reports a recorded failure is a
+successful read. Each finite read terminates with one closed, versioned JSON
+document for the requested locator, with the bounded observation or explicit
+read-state discriminant. It does not wait for execution completion, subscribe to
+updates or follow subsequent revisions. It emits no banners or prose framing and
+provides no generic author serializer; semantic fields and discriminants are
+fixed while field spellings remain an implementation choice. The local reader has only `read` and `close` authority.
+`close` is idempotent; later reads reject clearly. The reader may be opened during
+or after execution; closing it does not stop or mutate execution and does not
+delete the owner-managed artifact. A nonterminal record and its sample time do
+not prove that the execution is still alive; process disappearance does not
+manufacture terminal state.
+
+**Private producer and lifecycle.** A private Supervision producer mints the
+revision and sample time and records only actual `prepared`, `running`,
+`draining` and `closed` transitions. It MUST durably publish `prepared` before
+analysis starts; failure prevents analysis and makes no promise of a durable
+terminal record. After acknowledged preparation, a pre-entry setup failure may
+close with body disposition `not-entered` once all actual tracked work and other
+execution resources have drained and closed. A body that entered closes only
+after it returned or threw and its tracked work/resources have drained. The
+terminal body-disposition union is exactly `not-entered`, `returned`, or `threw`;
+body return is not strict report success. Terminal records preserve bounded typed
+execution failure reasons and diagnostic presence/count, never arbitrary error
+messages, stacks, body values or provider payloads. The producer also records
+authoritative stop and closure facts on all three paths, including the frozen
+closing stop state, earliest deferred `waitingUntil` left behind, and bounded
+remote-state interruption counts. A later mutation of shared stop control cannot
+rewrite a closed observation. An application statement alone cannot cause early
+closure.
+
+The application receives only a bounded completion-submission capability. Its
+closed statement is `not-classified`, `incomplete` with finite reason flags, or
+`confirmed` with a bounded exact acknowledged deliverable locator. It cannot set
+framework identity, revision, timestamp, phase, stop or closure facts, or write
+raw records. It submits at most one final statement per execution before closure;
+an exact duplicate is idempotent, a conflicting replacement is rejected, and
+closure seals the statement. Missing submission, including failure/setup paths,
+becomes `not-classified`. Submission cannot finish a run early; post-close writes
+are rejected. The application owns strict required-work, coverage and report
+publication truth. Generic return values, output filenames, pending promises and
+lifecycle events cannot confirm a report. Failed, pending, cancelled or incomplete
+terminal executions need no successful report. A confirmed report may coexist
+with a later unrelated execution or cleanup error only when strict obligations
+were actually established; both facts remain visible.
+
+**Bounded content and sampling.** The record MUST be bounded independently of
+corpus size. It may retain fixed counters for the existing lifecycle, step,
+operation, send, deferred-wait and promotion event groups; a bounded latest event;
+typed finite event and execution failure reasons and diagnostic presence/count;
+body disposition; actual stop facts; a bounded latest deferred-wait observation;
+terminal execution facts; and the application statement. Event counts describe
+sampled events only: they are not unique operations, current in-flight work, PR
+counts, completion, or percentages. Counters saturate at `Number.MAX_SAFE_INTEGER`
+and expose a saturation/lower-bound flag. Do not retain member/key/label arrays,
+raw errors, provider payloads, arbitrary author values, or generic numeric-string
+counters. A latest wait event is an observation, not a census of concurrent work.
+There is no PR denominator in this slice; full CLI-003 fan-out presentation and
+realistic workload qualification remain separate gates.
+
+Ordinary observations MUST be sampled no more often than once per second and
+coalesced to at most one newest pending snapshot; initial and terminal records
+are forced, and terminal supersedes an ordinary pending sample. The internal
+producer runs independently of fallible user observers, contains its own errors,
+and MUST NOT block stop/abort propagation on storage. Initial storage failure
+prevents analysis. Mid-run observation failure is contained and reported
+separately; it cannot alter dispatch, retry, stop or publication policy. Terminal
+acknowledgment/uncertainty is distinct from execution/report outcome. Exact
+terminal readback or idempotent retry may resolve acknowledgment uncertainty,
+but cannot change sealed contents or rerun analysis.
+
+**Examples and acceptance.** If two invocations reuse `runId: "weekly"`, they
+receive distinct locators; opening one locator never returns the other's record.
+If a run has observed 100 operation events, the record may say 100 observed
+operation events, but cannot say 100 PRs completed or that work is 80% done. If
+the last recorded deferred-wait event says `sleeping` while another wait is active,
+the reader reports that event as the latest observation, not as the full wait
+state. Required outcomes are in [A-21](acceptance.md#exact-execution-observation-cases).
+The record schema may choose field spellings, but its discriminants and these
+semantics are fixed. This accepted contract is not implementation or M6 acceptance evidence.
+
 ### CLI-001 — Read-only inspection is an explicit delivery checkpoint
 
 A usable read-only CLI MUST be delivered and validated as its own named checkpoint,

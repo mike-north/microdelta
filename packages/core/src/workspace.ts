@@ -38,13 +38,15 @@ import type {
 } from '@microdelta/resolution';
 import { openDurableHistory } from '@microdelta/history';
 import type { ICompletedResultReference as IHistoryReference } from '@microdelta/history';
-import { canonicalNodeLocation, createNodeClock, createNodeSqlite, createNodeTimer } from '@microdelta/machine-node';
+import { canonicalNodeLocation, createNodeClock, createNodeElapsedClock, createNodeSqlite, createNodeSqliteReader, createNodeTimer } from '@microdelta/machine-node';
 import { ResolutionError as ResolutionErrorClass, createResolution } from '@microdelta/resolution';
 import {
   SupervisionError as SupervisionErrorClass,
   WriterBusyError as WriterBusyErrorClass,
+  createSharedRateCoordinator,
   createStopController as createSupervisionStopController,
   createSupervision,
+  openExecutionObservationReader as openSupervisionExecutionObservationReader,
   operationJournalDeclaration,
   ordinaryLifecycle as supervisionOrdinaryLifecycle,
   stepLifecycle as supervisionStepLifecycle,
@@ -54,6 +56,9 @@ import type {
   IAttemptUsage as ISupervisionAttemptUsage,
   IDeferralMode as ISupervisionDeferralMode,
   IOperationAccounting as ISupervisionOperationAccounting,
+  IOperationSharedRate as ISupervisionOperationSharedRate,
+  ISharedRateSurface as ISupervisionSharedRateSurface,
+  ISharedRateSurfaceDeclaration as ISupervisionSharedRateSurfaceDeclaration,
   IOperationAttribution as ISupervisionOperationAttribution,
   IOperationBlock as ISupervisionOperationBlock,
   IOperationEvent as ISupervisionOperationEvent,
@@ -64,6 +69,14 @@ import type {
   IOperationRequest as ISupervisionOperationRequest,
   IOperationResponse as ISupervisionOperationResponse,
   IOperationRetryPolicy as ISupervisionOperationRetryPolicy,
+  IRetryDecision as ISupervisionRetryDecision,
+  IRetryDecisionInput as ISupervisionRetryDecisionInput,
+  IRetryAttemptSummary as ISupervisionRetryAttemptSummary,
+  IRetryFacts as ISupervisionRetryFacts,
+  IRetryHistory as ISupervisionRetryHistory,
+  IRetryOutcome as ISupervisionRetryOutcome,
+  IRetrySourceScope as ISupervisionRetrySourceScope,
+  ISourceRetryPolicy as ISupervisionSourceRetryPolicy,
   IOperationSend as ISupervisionOperationSend,
   IOperationSettlement as ISupervisionOperationSettlement,
   IOperationSettlementRecord as ISupervisionOperationSettlementRecord,
@@ -96,6 +109,18 @@ import type {
   IOrdinaryPhase as ISupervisionOrdinaryPhase,
   IRequestOptions as ISupervisionRequestOptions,
   IRun,
+  IRunOptions as ISupervisionRunOptions,
+  IApplicationStatement as ISupervisionApplicationStatement,
+  IApplicationStatementSubmission as ISupervisionApplicationStatementSubmission,
+  IExecutionObservation as ISupervisionExecutionObservation,
+  IExecutionObservationEventCounts as ISupervisionExecutionObservationEventCounts,
+  IExecutionObservationFaultCount as ISupervisionExecutionObservationFaultCount,
+  IExecutionObservationLocator as ISupervisionExecutionObservationLocator,
+  IExecutionObservationReader as ISupervisionExecutionObservationReader,
+  IExecutionObservationReadResult as ISupervisionExecutionObservationReadResult,
+  IExecutionObservationReadState as ISupervisionExecutionObservationReadState,
+  IObservationAcknowledgment as ISupervisionObservationAcknowledgment,
+  IObservedRun as ISupervisionObservedRun,
   IRunContext as ISupervisionRunContext,
   IDiscoveryReport as ISupervisionDiscoveryReport,
   IFoldReport as ISupervisionFoldReport,
@@ -108,6 +133,9 @@ import type {
   IRunObserver as ISupervisionRunObserver,
   IRunResult as ISupervisionRunResult,
   IStrictFoldOutcome as ISupervisionStrictFoldOutcome,
+  ITraversalAdapter as ISupervisionTraversalAdapter,
+  ITraversalAdaptation as ISupervisionTraversalAdaptation,
+  ITraversalReport as ISupervisionTraversalReport,
   ISupervisionErrorCode as ISupervisionErrorCodeOf,
 } from '@microdelta/supervision';
 
@@ -148,6 +176,39 @@ export type IOrdinaryPhase = ISupervisionOrdinaryPhase;
 /** The live run's context: volatile run id, analysis and selected environment. @alpha */
 export type IRunContext = ISupervisionRunContext;
 
+/** The exact address of one observation artifact, independent of a volatile public run id. @alpha */
+export type IExecutionObservationLocator = ISupervisionExecutionObservationLocator;
+
+/** A bounded application assertion that never changes framework run facts. @alpha */
+export type IApplicationStatement = ISupervisionApplicationStatement;
+
+/** The body's sole authority to submit its own final application assertion. @alpha */
+export type IApplicationStatementSubmission = ISupervisionApplicationStatementSubmission;
+
+/** Bounded counts of lifecycle positions observed during one execution. @alpha */
+export type IExecutionObservationEventCounts = ISupervisionExecutionObservationEventCounts;
+
+/** Exact or saturating lower-bound count of observation-only faults. @alpha */
+export type IExecutionObservationFaultCount = ISupervisionExecutionObservationFaultCount;
+
+/** Committed latest facts for the exact execution, without author payloads. @alpha */
+export type IExecutionObservation = ISupervisionExecutionObservation;
+
+/** One finite exact-locator read outcome. @alpha */
+export type IExecutionObservationReadState = ISupervisionExecutionObservationReadState;
+
+/** The versioned finite read protocol document. @alpha */
+export type IExecutionObservationReadResult = ISupervisionExecutionObservationReadResult;
+
+/** Independent finite read and local release authority only. @alpha */
+export type IExecutionObservationReader = ISupervisionExecutionObservationReader;
+
+/** Terminal storage knowledge, separate from the execution body's result. @alpha */
+export type IObservationAcknowledgment = ISupervisionObservationAcknowledgment;
+
+/** An exact locator, original body result, and independent durability receipt. @alpha */
+export type IObservedRun<T> = ISupervisionObservedRun<T>;
+
 /** One event offered to run observers. @alpha */
 export type IRunEvent = ISupervisionRunEvent;
 
@@ -172,6 +233,15 @@ export type IGateEvidence = IResolutionGateEvidence;
  * @alpha
  */
 export type IFoldReport = ISupervisionFoldReport;
+
+/** A response-only adapter of the fixed declared root source, with no transport authority. @alpha */
+export type ITraversalAdapter = ISupervisionTraversalAdapter;
+
+/** One page's next frontier and advertised continuation or discovery closure. @alpha */
+export type ITraversalAdaptation = ISupervisionTraversalAdaptation;
+
+/** Acquisition termination and its last immutable strict-fold report remain separate facts. @alpha */
+export type ITraversalReport = ISupervisionTraversalReport;
 
 /**
  * A strict fold's typed outcome in a run: `succeeded` with its settled
@@ -307,6 +377,15 @@ export type IRunExecution = ISupervisionRunExecution;
  */
 export type IOperationRequest<T> = ISupervisionOperationRequest<T>;
 
+/** Explicit source attribution for one registered shared gate. @alpha */
+export type IOperationSharedRate = ISupervisionOperationSharedRate;
+
+/** Opaque reference issued by the facade assembly's coordinator. @alpha */
+export type ISharedRateSurface = ISupervisionSharedRateSurface;
+
+/** Non-secret logical surface and immutable mandatory gates. @alpha */
+export type ISharedRateSurfaceDeclaration = ISupervisionSharedRateSurfaceDeclaration;
+
 /** What one request attempt's send receives: the operation and attempt identities, the idempotency key when declared, and the abort signal. @alpha */
 export type IOperationSend = ISupervisionOperationSend;
 
@@ -321,6 +400,22 @@ export type IOperationQuantity = ISupervisionOperationQuantity;
 
 /** An author's retry policy for one operation: transient attempts, backoff and the rate-limit retry cap. @alpha */
 export type IOperationRetryPolicy = ISupervisionOperationRetryPolicy;
+/** One source retry classification result exposed by the assembled facade. @alpha */
+export type IRetryDecision = ISupervisionRetryDecision;
+/** Bounded input supplied to a source retry policy. @alpha */
+export type IRetryDecisionInput = ISupervisionRetryDecisionInput;
+/** One prior sent-attempt summary surfaced to a facade source policy. @alpha */
+export type IRetryAttemptSummary = ISupervisionRetryAttemptSummary;
+/** Adapter-extracted source facts. @alpha */
+export type IRetryFacts = ISupervisionRetryFacts;
+/** Bounded current-run attempt history. @alpha */
+export type IRetryHistory = ISupervisionRetryHistory;
+/** Normalized refusal category supplied to facade source policies. @alpha */
+export type IRetryOutcome = ISupervisionRetryOutcome;
+/** Reusable source/service/connection identity. @alpha */
+export type IRetrySourceScope = ISupervisionRetrySourceScope;
+/** Exact-scoped reusable source retry policy. @alpha */
+export type ISourceRetryPolicy = ISupervisionSourceRetryPolicy;
 
 /** The status of one external operation as the journal records it. @alpha */
 export type IOperationStatus = ISupervisionOperationStatus;
@@ -627,6 +722,8 @@ export interface IWorkspaceRunOptions<TInputs extends object, THelpers extends o
    * report that time as the result's `waitingUntil`.
    */
   readonly deferral?: IDeferralMode;
+  /** Exact-scoped source classifiers forwarded to Run Supervision. */
+  readonly retryPolicies?: readonly ISourceRetryPolicy[];
 }
 
 /**
@@ -685,6 +782,20 @@ export interface IWorkspace {
     options: IWorkspaceRunOptions<TInputs, THelpers>,
     body: (run: IWorkspaceRun) => T | Promise<T>,
   ): Promise<IRunResult<Awaited<T>>>;
+  /**
+   * Start the same supervised workspace path with a separate rollback-journal
+   * observation artifact. The body receives only application-statement
+   * submission; its return and statement do not assert report completeness.
+   * A closed workspace, a same-store enclosing run, or an invalid caller run ID
+   * refuses synchronously with `invalid-request`, before an observed handle,
+   * execution identity or artifact exists. Once a handle is returned, failures
+   * in its run path reject `result`; its separate acknowledgment reports the
+   * durability knowledge without replacing the body's result or error.
+   */
+  startObserved<TInputs extends object, THelpers extends object, T>(
+    options: IWorkspaceRunOptions<TInputs, THelpers> & { readonly observationLocation: string },
+    body: (run: IWorkspaceRun, application: IApplicationStatementSubmission) => T | Promise<T>,
+  ): IObservedRun<Awaited<T>>;
   /** Close the store file; later runs fail. Close only after every run has settled: closing under a live run fails its later requests. */
   close(): void;
 }
@@ -705,13 +816,49 @@ const defaultLeaseMilliseconds = 30_000;
 /** Node's timer, which arms stop deadlines, waits for a time and paces waits for the writer lease. */
 const timer = createNodeTimer();
 
+/** Node's monotonic duration capability ages rate debits independently of wall-clock corrections. */
+const elapsedClock = createNodeElapsedClock();
+
+/** One facade assembly owns the ledger independently of workspace/run lifetimes. */
+const sharedRateCoordinator = createSharedRateCoordinator({ epochClock: timer, elapsedClock });
+
 /**
  * The facade's one Run Supervision, over the Node Machine's asynchronous
- * context and timer supplied structurally. `currentRun()`,
- * `currentExecution()` and every workspace run share it, so author code finds
- * whichever run is live in its asynchronous execution.
+ * context, timer and shared admission owner. currentRun(), currentExecution()
+ * and every workspace run share this composition's asynchronous scope.
  */
-const supervision = createSupervision({ context: machine, timer });
+const supervision = createSupervision({
+  context: machine,
+  timer,
+  sharedRates: { coordinator: sharedRateCoordinator, elapsedClock },
+  observation: { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random, clock: createNodeClock(), elapsedClock, timer },
+});
+
+/**
+ * Open only the exact observer port. This does not open History or a workspace,
+ * initialize schemas, assemble author code, or gain execution controls.
+ * @alpha
+ */
+export function openExecutionObservationReader(locator: IExecutionObservationLocator): IExecutionObservationReader {
+  return openSupervisionExecutionObservationReader(createNodeSqliteReader(), locator);
+}
+
+/**
+ * Intern a non-secret logical API surface in this facade assembly. All its
+ * openWorkspace instances and runs share registered environment/service/access
+ * gates; opening a workspace does not create another coordinator owner.
+ * Independent Supervision compositions share only when explicitly given the
+ * same coordinator; foreign handles are refused. Other facade copies/workers
+ * and processes are outside this assembly's sharing guarantee.
+ * Registration adds no implicit numeric limit. A source attaches the handle
+ * and its known cooldown gate to each associated external operation.
+ * @param declaration - Exact environment/service/access/surface identity and immutable gates.
+ * @returns The interned opaque surface handle.
+ * @alpha
+ */
+export function registerSharedRateSurface(declaration: ISharedRateSurfaceDeclaration): ISharedRateSurface {
+  return sharedRateCoordinator.registerSurface(declaration);
+}
 
 /** Where one live workspace run stands: the store it writes and the run it was started inside, if any. */
 interface ILiveRun {
@@ -814,26 +961,28 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
     : Object.freeze({ journal: history.openJournal(operationJournalDeclaration), accounting, random });
   let open = true;
 
-  return Object.freeze({
-    logicalStore: history.logicalStore,
-    run<TInputs extends object, THelpers extends object, T>(
-      runOptions: IWorkspaceRunOptions<TInputs, THelpers>,
-      body: (run: IWorkspaceRun) => T | Promise<T>,
-    ): Promise<IRunResult<Awaited<T>>> {
+  /** Assemble one workspace run independently of its normal or observed launch. */
+  function prepareWorkspaceRun<TInputs extends object, THelpers extends object>(
+    runOptions: IWorkspaceRunOptions<TInputs, THelpers>,
+  ): {
+    readonly options: ISupervisionRunOptions;
+    readonly invoke: <T>(live: IRun, body: (run: IWorkspaceRun) => T) => T;
+    readonly forget: () => void;
+  } {
       if (!open) {
-        return Promise.reject(new SupervisionErrorClass('invalid-request', 'This workspace has been closed'));
+        throw new SupervisionErrorClass('invalid-request', 'This workspace has been closed');
       }
       const parent = currentLiveRun();
       const enclosing = enclosingRunOver(store, parent);
       if (enclosing !== undefined) {
-        return Promise.reject(new SupervisionErrorClass(
+        throw new SupervisionErrorClass(
           'invalid-request',
           `A workspace run cannot start inside an open run over the same store (${enclosing.runId}): it would wait for the writer lease that run holds`,
-        ));
+        );
       }
       const callerRunId: unknown = runOptions.runId;
       if (callerRunId !== undefined && (typeof callerRunId !== 'string' || !runIdentifierRule.test(callerRunId) || mintedRunIdentifierRule.test(callerRunId))) {
-        return Promise.reject(new SupervisionErrorClass('invalid-request', 'A caller-supplied run identifier must be an identifier (lower-case, starting with a letter, at most 64 of a-z, 0-9, ".", "_", ":" and "-") and not the facade\'s minted run:<32 hex digits> form'));
+        throw new SupervisionErrorClass('invalid-request', 'A caller-supplied run identifier must be an identifier (lower-case, starting with a letter, at most 64 of a-z, 0-9, ".", "_", ":" and "-") and not the facade\'s minted run:<32 hex digits> form');
       }
       const { authoring, composition } = runOptions;
       // A volatile identity for this run, used for its writer holder, context and operation correlation; never
@@ -841,7 +990,7 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
       const runId = runOptions.runId ?? `run:${random.randomIdentifier()}`;
       /** This run's context once its body has started. */
       let started: IRunContext | undefined;
-      const settled = supervision.run({
+      const options: ISupervisionRunOptions = {
         analysis: composition.scope,
         environment: runOptions.environment,
         runId,
@@ -852,6 +1001,7 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
         ...(runOptions.window === undefined ? {} : { window: runOptions.window }),
         ...(runOptions.writerWait === undefined ? {} : { writerWait: runOptions.writerWait }),
         ...(runOptions.deferral === undefined ? {} : { deferral: runOptions.deferral }),
+        ...(runOptions.retryPolicies === undefined ? {} : { retryPolicies: runOptions.retryPolicies }),
         ...(operations === undefined ? {} : { operations }),
         // History's durable store is Supervision's structural promotion port.
         promotion: history,
@@ -868,8 +1018,10 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
           admission: ports.admission,
           observer: ports.observer,
           execution: ports.execution,
+          traversalAuthority: ports.traversalAuthority,
         }),
-      }, (live) => {
+      };
+      const invoke = <T>(live: IRun, body: (run: IWorkspaceRun) => T): T => {
         started = live.context;
         liveRuns.set(live.context, Object.freeze({ store, parent }));
         const run: IWorkspaceRun = Object.freeze({
@@ -880,6 +1032,7 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
           resolve: live.resolve,
           resolveMembers: live.resolveMembers,
           resolveFold: live.resolveFold,
+          traverse: live.traverse,
           resolveOutcomeFold: live.resolveOutcomeFold,
           check: live.check,
           recover: live.recover,
@@ -912,7 +1065,7 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
           },
         });
         return body(run);
-      });
+      };
       // Forgetting a settled run only bounds the registry's memory: a closed run
       // can no longer enclose anything, since lookups inside it fail with run-closed.
       const forget = (): void => {
@@ -920,8 +1073,33 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
           liveRuns.delete(started);
         }
       };
-      settled.then(forget, forget);
-      return settled;
+      return { options, invoke, forget };
+  }
+
+  return Object.freeze({
+    logicalStore: history.logicalStore,
+    run<TInputs extends object, THelpers extends object, T>(
+      runOptions: IWorkspaceRunOptions<TInputs, THelpers>,
+      body: (run: IWorkspaceRun) => T | Promise<T>,
+    ): Promise<IRunResult<Awaited<T>>> {
+      try {
+        const prepared = prepareWorkspaceRun(runOptions);
+        const settled = supervision.run(prepared.options, (live) => prepared.invoke(live, body));
+        void settled.then(prepared.forget, prepared.forget);
+        return settled;
+      } catch (error: unknown) {
+        return Promise.reject(error);
+      }
+    },
+    startObserved<TInputs extends object, THelpers extends object, T>(
+      runOptions: IWorkspaceRunOptions<TInputs, THelpers> & { readonly observationLocation: string },
+      body: (run: IWorkspaceRun, application: IApplicationStatementSubmission) => T | Promise<T>,
+    ): IObservedRun<Awaited<T>> {
+      const prepared = prepareWorkspaceRun(runOptions);
+      const observed = supervision.startObserved({ ...prepared.options, observationLocation: runOptions.observationLocation },
+        (live, application) => prepared.invoke(live, (run) => body(run, application)));
+      void observed.result.then(prepared.forget, prepared.forget);
+      return observed;
     },
     close(): void {
       if (open) {

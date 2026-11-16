@@ -6,9 +6,12 @@
 
 import type { IAdmissionRequest } from '@microdelta/resolution';
 import type { IBindingDescriptor } from '@microdelta/definition';
+import type { IBindingFamily } from '@microdelta/definition';
 import type { ICheckOutcome } from '@microdelta/resolution';
+import type { IClockCapability } from '@microdelta/machine';
 import type { ICompleteOutcomeFoldCoverage } from '@microdelta/resolution';
 import type { IDiscoveryOutcome } from '@microdelta/resolution';
+import type { IElapsedClockCapability } from '@microdelta/machine';
 import type { IExecutionAdmission } from '@microdelta/resolution';
 import type { IExecutionSupervision } from '@microdelta/resolution';
 import type { IFoldOutcome } from '@microdelta/resolution';
@@ -17,10 +20,16 @@ import type { IIncompleteOutcomeFoldCoverage } from '@microdelta/resolution';
 import type { ILifecycleEvent } from '@microdelta/resolution';
 import type { ILifecycleObserver } from '@microdelta/resolution';
 import type { IOutcomeFoldOutcome } from '@microdelta/resolution';
+import type { IRandomIdentifierCapability } from '@microdelta/machine';
 import type { IRecoveryResult } from '@microdelta/resolution';
 import type { IResolution } from '@microdelta/resolution';
 import type { IResolutionOutcome } from '@microdelta/resolution';
 import type { IResolveRequest } from '@microdelta/resolution';
+import type { IRootAcquisitionWitness } from '@microdelta/definition';
+import type { ISqliteCapability } from '@microdelta/machine';
+import type { ISqliteReadCapability } from '@microdelta/machine';
+import type { ITimerCapability } from '@microdelta/machine';
+import type { ITraversalRunAuthority } from '@microdelta/resolution';
 import type { ResolutionError } from '@microdelta/resolution';
 
 // @alpha
@@ -28,6 +37,9 @@ export const blocksCollection = "microdelta.supervision.blocks";
 
 // @alpha
 export const blocksFormat = "microdelta.supervision.blocks";
+
+// @alpha
+export function createSharedRateCoordinator(options: ISharedRateCoordinatorOptions): ISharedRateCoordinator;
 
 // @alpha
 export function createStopController(options?: IStopControllerOptions): IStopController;
@@ -39,6 +51,22 @@ export function createSupervision(options: ISupervisionOptions): ISupervision;
 export interface IAbortSignal {
     readonly aborted: boolean;
     onAbort(listener: () => void): () => void;
+}
+
+// @alpha
+export type IApplicationStatement = {
+    readonly kind: 'not-classified';
+} | {
+    readonly kind: 'incomplete';
+    readonly reasons: readonly ('required-work' | 'coverage' | 'publication' | 'other')[];
+} | {
+    readonly kind: 'confirmed';
+    readonly deliverable: string;
+};
+
+// @alpha
+export interface IApplicationStatementSubmission {
+    submit(statement: IApplicationStatement): void;
 }
 
 // @alpha
@@ -55,6 +83,115 @@ export type IDiscoveryReport = Extract<IDiscoveryOutcome, {
     readonly collection: IBindingDescriptor;
     readonly refused: IBindingDescriptor;
     readonly reason: string;
+};
+
+// @alpha
+export interface IExecutionObservation {
+    // (undocumented)
+    readonly application?: IApplicationStatement;
+    // (undocumented)
+    readonly body?: 'not-entered' | 'returned' | 'threw';
+    readonly context: IRunContext;
+    readonly diagnostics?: {
+        readonly present: boolean;
+        readonly count: number;
+        readonly lowerBound: boolean;
+    };
+    // (undocumented)
+    readonly eventCounts: IExecutionObservationEventCounts;
+    readonly executionFailure?: {
+        readonly kind: 'supervision';
+        readonly code: ISupervisionErrorCode;
+    } | {
+        readonly kind: 'other';
+    };
+    // (undocumented)
+    readonly executionId: string;
+    readonly interruptions?: {
+        readonly cancelled: number;
+        readonly running: number;
+        readonly unknown: number;
+        readonly lowerBound: boolean;
+    };
+    readonly observationFaults?: IExecutionObservationFaultCount;
+    // (undocumented)
+    readonly phase: 'prepared' | 'running' | 'draining' | 'closed';
+    readonly revision: number;
+    readonly sampledAt: number;
+    readonly stop?: IStopState;
+    readonly waitingUntil?: number;
+}
+
+// @alpha
+export interface IExecutionObservationEventCounts {
+    // (undocumented)
+    readonly lowerBound: boolean;
+    // (undocumented)
+    readonly operation: number;
+    // (undocumented)
+    readonly ordinary: number;
+    // (undocumented)
+    readonly promotion: number;
+    // (undocumented)
+    readonly send: number;
+    // (undocumented)
+    readonly step: number;
+    // (undocumented)
+    readonly stop: number;
+    // (undocumented)
+    readonly wait: number;
+}
+
+// @alpha
+export interface IExecutionObservationFaultCount {
+    readonly count: number;
+    readonly lowerBound: boolean;
+}
+
+// @alpha
+export interface IExecutionObservationHost {
+    // (undocumented)
+    readonly clock: IClockCapability;
+    // (undocumented)
+    readonly elapsedClock: IElapsedClockCapability;
+    // (undocumented)
+    readonly random: IRandomIdentifierCapability;
+    // (undocumented)
+    readonly reader: ISqliteReadCapability;
+    // (undocumented)
+    readonly sqlite: ISqliteCapability;
+    // (undocumented)
+    readonly timer: ITimerCapability;
+}
+
+// @alpha
+export interface IExecutionObservationLocator {
+    // (undocumented)
+    readonly executionId: string;
+    // (undocumented)
+    readonly location: string;
+}
+
+// @alpha
+export interface IExecutionObservationReader {
+    close(): void;
+    read(): IExecutionObservationReadResult;
+}
+
+// @alpha
+export interface IExecutionObservationReadResult {
+    // (undocumented)
+    readonly result: IExecutionObservationReadState;
+    // (undocumented)
+    readonly version: 1;
+}
+
+// @alpha
+export type IExecutionObservationReadState = {
+    readonly kind: 'observed';
+    readonly observation: IExecutionObservation;
+} | {
+    readonly kind: 'absent' | 'identity-mismatch' | 'unsupported' | 'corrupt' | 'busy' | 'unavailable' | 'recovery-required';
 };
 
 // @alpha
@@ -142,6 +279,28 @@ export interface IMembersTarget {
 }
 
 // @alpha
+export type IObservationAcknowledgment = {
+    readonly kind: 'acknowledged';
+    readonly revision: number;
+    readonly observationFaults?: IExecutionObservationFaultCount;
+} | {
+    readonly kind: 'uncertain';
+    readonly observationFaults?: IExecutionObservationFaultCount;
+} | {
+    readonly kind: 'unprepared';
+};
+
+// @alpha
+export interface IObservedRun<T> {
+    // (undocumented)
+    readonly acknowledgment: Promise<IObservationAcknowledgment>;
+    // (undocumented)
+    readonly locator: IExecutionObservationLocator;
+    // (undocumented)
+    readonly result: Promise<IRunResult<T>>;
+}
+
+// @alpha
 export interface IOperationAccounting {
     acknowledgeUsage(report: {
         readonly environment: string;
@@ -175,6 +334,10 @@ export type IOperationBlock = {
 } | {
     readonly kind: 'policy-exhausted';
     readonly operation: string;
+} | {
+    readonly kind: 'classification';
+    readonly operation: string;
+    readonly reason: 'waiting' | 'interrupted';
 } | {
     readonly kind: 'unknown-outcome';
     readonly operation: string;
@@ -228,7 +391,7 @@ export interface IOperationQuantity {
 }
 
 // @alpha
-export type IOperationReason = 'rate-limited' | 'transient' | 'permanent' | 'lost-response' | 'not-repeat-safe' | 'policy-exhausted' | 'not-before' | 'stopped' | 'lease-lost' | 'recovered-after-crash' | 'unrecorded' | 'conflict' | 'operator';
+export type IOperationReason = 'rate-limited' | 'transient' | 'permanent' | 'lost-response' | 'not-repeat-safe' | 'policy-exhausted' | 'not-before' | 'classification-waiting' | 'classification-interrupted' | 'stopped' | 'lease-lost' | 'recovered-after-crash' | 'unrecorded' | 'conflict' | 'operator';
 
 // @alpha
 export type IOperationRemoteState = 'cancelled' | 'running' | 'unknown';
@@ -241,7 +404,9 @@ export interface IOperationRequest<T> {
     perform(send: IOperationSend): Promise<IOperationResponse<T>>;
     readonly providerIdempotency?: boolean;
     readonly retry?: IOperationRetryPolicy;
+    readonly retrySource?: IRetrySourceScope;
     readonly safeToRepeat?: boolean;
+    readonly sharedRate?: IOperationSharedRate;
 }
 
 // @alpha
@@ -254,13 +419,19 @@ export type IOperationResponse<T> = {
     readonly transient: boolean;
     readonly error?: unknown;
     readonly usage?: IOperationUsage;
+    readonly retryFacts?: IRetryFacts;
+    readonly notBefore?: number;
 } | {
     readonly kind: 'rate-limited';
     readonly retryAt?: number;
     readonly usage?: IOperationUsage;
+    readonly retryFacts?: IRetryFacts;
+    readonly notBefore?: number;
 } | {
     readonly kind: 'unknown';
     readonly usage?: IOperationUsage;
+    readonly retryFacts?: IRetryFacts;
+    readonly notBefore?: number;
 };
 
 // @alpha
@@ -298,6 +469,13 @@ export interface IOperationSettlementRecord {
     readonly operator: string;
     readonly outcome: 'succeeded' | 'failed' | undefined;
     readonly report: string | undefined;
+}
+
+// @alpha
+export interface IOperationSharedRate {
+    readonly cooldownGateId: string;
+    readonly quantityCost?: number;
+    readonly surface: ISharedRateSurface;
 }
 
 // @alpha
@@ -422,6 +600,70 @@ export interface IResolutionPorts {
     readonly admission: IExecutionAdmission;
     readonly execution: IExecutionSupervision;
     readonly observer: ILifecycleObserver;
+    readonly traversalAuthority: ITraversalRunAuthority;
+}
+
+// @alpha
+export interface IRetryAttemptSummary {
+    readonly decision?: IRetryDecision;
+    readonly requestAttempt: string;
+    readonly status: 'failed' | 'rate-limited' | 'unknown';
+    readonly usage: IAttemptUsage;
+}
+
+// @alpha
+export type IRetryDecision = {
+    readonly kind: 'retry-now';
+} | {
+    readonly kind: 'retry-after';
+    readonly delayMilliseconds: number;
+} | {
+    readonly kind: 'stop';
+};
+
+// @alpha
+export interface IRetryDecisionInput {
+    readonly context: IRunContext;
+    readonly facts: IRetryFacts;
+    readonly history: IRetryHistory;
+    readonly knownNotBefore?: number;
+    readonly operation: string;
+    readonly outcome: IRetryOutcome;
+    readonly requestAttempt: string;
+    readonly signal: IAbortSignal;
+    readonly source: IRetrySourceScope;
+}
+
+// @alpha
+export interface IRetryFacts {
+    readonly conditions?: readonly string[];
+    readonly httpStatus?: number;
+    readonly providerCode?: string;
+}
+
+// @alpha
+export interface IRetryHistory {
+    readonly omittedPriorAttempts: number;
+    readonly previousDelayMilliseconds?: number;
+    readonly prior: readonly IRetryAttemptSummary[];
+    readonly sentAttempts: number;
+}
+
+// @alpha
+export type IRetryOutcome = {
+    readonly kind: 'failed';
+    readonly transient: boolean;
+} | {
+    readonly kind: 'rate-limited';
+} | {
+    readonly kind: 'unknown';
+};
+
+// @alpha
+export interface IRetrySourceScope {
+    readonly connection: string;
+    readonly service: string;
+    readonly source: string;
 }
 
 // @alpha
@@ -442,6 +684,7 @@ export interface IRun {
     resolveMembers(target: IMembersTarget, request: IRequestOptions): Promise<IMembersReport>;
     resolveOutcomeFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IOutcomeFoldReport>;
     settleOperation(settlement: IOperationSettlement): Promise<IOperationView>;
+    traverse<TFamily extends IBindingFamily>(witness: IRootAcquisitionWitness<TFamily>, adapter: ITraversalAdapter, request: IRequestOptions): Promise<ITraversalReport>;
 }
 
 // @alpha
@@ -449,6 +692,16 @@ export interface IRunContext {
     readonly analysis: string;
     readonly environment: string;
     readonly runId: string;
+}
+
+// @alpha
+export interface IRunElapsedClock {
+    currentElapsedMilliseconds(): number;
+}
+
+// @alpha
+export interface IRunEpochClock {
+    currentEpochMilliseconds(): number;
 }
 
 // @alpha
@@ -499,7 +752,7 @@ export interface IRunObserver {
 }
 
 // @alpha
-export type IRunOperationName = 'check' | 'inspectOperations' | 'ordinary' | 'read' | 'recover' | 'resolve' | 'resolveFold' | 'resolveMembers' | 'resolveOutcomeFold' | 'settleOperation' | 'promote' | 'promotions';
+export type IRunOperationName = 'check' | 'inspectOperations' | 'ordinary' | 'read' | 'recover' | 'resolve' | 'resolveFold' | 'traverse' | 'resolveMembers' | 'resolveOutcomeFold' | 'settleOperation' | 'promote' | 'promotions';
 
 // @alpha
 export interface IRunOperationPorts {
@@ -519,6 +772,7 @@ export interface IRunOptions {
     readonly permits?: number;
     readonly promotion?: IRunPromotionPort;
     readonly resolution: (ports: IResolutionPorts) => IResolution;
+    readonly retryPolicies?: readonly ISourceRetryPolicy[];
     readonly runId?: string;
     readonly stop?: IStopController;
     readonly window?: number;
@@ -601,6 +855,109 @@ export interface ISendRequest<T> {
 }
 
 // @alpha
+export type ISharedRateAdmission = ({
+    readonly kind: 'admitted';
+} & ISharedRateReservation) | {
+    readonly kind: 'wait';
+    readonly notBefore?: number;
+    readonly retryAtElapsed?: number;
+} | {
+    readonly kind: 'refused';
+    readonly reason: string;
+} | {
+    readonly kind: 'timing-failure';
+    readonly reason: string;
+};
+
+// @alpha
+export type ISharedRateCommitResult = {
+    readonly kind: 'committed';
+} | {
+    readonly kind: 'wait';
+    readonly notBefore?: number;
+    readonly retryAtElapsed?: number;
+} | {
+    readonly kind: 'refused';
+    readonly reason: string;
+} | {
+    readonly kind: 'timing-failure';
+    readonly reason: string;
+};
+
+// @alpha
+export interface ISharedRateCoordinator {
+    admit(request: {
+        readonly surface: ISharedRateSurface;
+        readonly run: string;
+        readonly quantityCost?: number;
+        readonly acceptedNotBefore?: number;
+    }): ISharedRateAdmission;
+    observeCooldown(surface: ISharedRateSurface, gateId: string, epochFloor: number): void;
+    registerSurface(declaration: ISharedRateSurfaceDeclaration): ISharedRateSurface;
+    validateAssociation(surface: ISharedRateSurface, association: {
+        readonly environment: string;
+        readonly service?: string;
+        readonly accessContext?: string;
+        readonly cooldownGateId: string;
+    }): void;
+}
+
+// @alpha
+export interface ISharedRateCoordinatorOptions {
+    readonly elapsedClock: IRunElapsedClock;
+    readonly epochClock: IRunEpochClock;
+}
+
+// @alpha
+export interface ISharedRateDispatchOptions {
+    readonly coordinator: ISharedRateCoordinator;
+    readonly elapsedClock: IRunElapsedClock;
+}
+
+// @alpha
+export type ISharedRateErrorCode = 'invalid-declaration' | 'conflicting-declaration' | 'unknown-association' | 'invalid-plan';
+
+// @alpha
+export interface ISharedRateGateDeclaration {
+    readonly id: string;
+    readonly limit?: ISharedRateLimit;
+}
+
+// @alpha
+export interface ISharedRateLimit {
+    readonly costBasis: 'requests' | 'quantity';
+    readonly intervalMilliseconds: number;
+    readonly units: number;
+}
+
+// @alpha
+export interface ISharedRateReservation {
+    commitPossibleSend(): ISharedRateCommitResult;
+    rollbackBeforeSend(): void;
+}
+
+// @alpha
+export interface ISharedRateSurface {
+    readonly id: string;
+}
+
+// @alpha
+export interface ISharedRateSurfaceDeclaration {
+    readonly accessContext: string;
+    readonly environment: string;
+    readonly gates?: readonly ISharedRateGateDeclaration[];
+    readonly service: string;
+    readonly surface: string;
+}
+
+// @alpha
+export interface ISourceRetryPolicy {
+    decide(input: IRetryDecisionInput): IRetryDecision | Promise<IRetryDecision>;
+    readonly id: string;
+    readonly scope: IRetrySourceScope;
+}
+
+// @alpha
 export type IStepLifecycle = readonly ['verify', 'finality', 'admit', 'refuse', 'claim', 'execute', 'publish', 'accept', 'release', 'abandon'];
 
 // @alpha
@@ -663,16 +1020,51 @@ export interface ISupervision {
     current(): IRunContext;
     execution(): IRunExecution;
     run<T>(options: IRunOptions, body: (run: IRun) => T | Promise<T>): Promise<IRunResult<Awaited<T>>>;
+    startObserved<T>(options: IRunOptions & {
+        readonly observationLocation: string;
+    }, body: (run: IRun, application: IApplicationStatementSubmission) => T | Promise<T>): IObservedRun<Awaited<T>>;
 }
 
 // @alpha
-export type ISupervisionErrorCode = 'outside-run' | 'run-closed' | 'composition-phase' | 'observer-failure' | 'writer-busy' | 'invalid-request' | 'stopped' | 'operation-failed' | 'operation-deferred' | 'operation-unknown' | 'operation-exhausted' | 'operation-unrecorded' | 'operation-resolved' | 'integrity' | 'undeclared-call';
+export type ISupervisionErrorCode = 'outside-run' | 'run-closed' | 'composition-phase' | 'observer-failure' | 'writer-busy' | 'invalid-request' | 'invalid-response' | 'rate-timing-failed' | 'stopped' | 'operation-failed' | 'operation-classification-failed' | 'operation-classification-incomplete' | 'operation-deferred' | 'operation-unknown' | 'operation-exhausted' | 'operation-unrecorded' | 'operation-resolved' | 'integrity' | 'undeclared-call';
 
 // @alpha
 export interface ISupervisionOptions {
     readonly context: IRunScopeCapability;
+    readonly observation?: IExecutionObservationHost;
+    readonly sharedRates?: ISharedRateDispatchOptions;
     readonly timer?: IRunTimer;
 }
+
+// @alpha
+export type ITraversalAdaptation = {
+    readonly kind: 'continue';
+    readonly frontier: object;
+    readonly continuation: readonly string[];
+} | {
+    readonly kind: 'complete';
+    readonly frontier: object;
+};
+
+// @alpha
+export interface ITraversalAdapter {
+    // (undocumented)
+    accept(page: object, previousFrontier: object | undefined): ITraversalAdaptation;
+}
+
+// @alpha
+export type ITraversalReport = {
+    readonly kind: 'complete';
+    readonly report: IFoldReport;
+} | {
+    readonly kind: 'discovery-failed';
+    readonly error: unknown;
+    readonly report?: IFoldReport;
+} | {
+    readonly kind: 'stopped';
+    readonly reason: string;
+    readonly report?: IFoldReport;
+};
 
 // @alpha
 export interface IWaitEvent {
@@ -711,6 +1103,9 @@ export interface IWriterWaitOptions {
 }
 
 // @alpha
+export function openExecutionObservationReader(host: ISqliteReadCapability, locator: IExecutionObservationLocator): IExecutionObservationReader;
+
+// @alpha
 export const operationFormat = "microdelta.supervision.operation";
 
 // @alpha
@@ -726,6 +1121,12 @@ export const operationsCollection = "microdelta.supervision.operations";
 
 // @alpha
 export const ordinaryLifecycle: readonly IOrdinaryPhase[];
+
+// @alpha
+export class SharedRateCoordinatorError extends Error {
+    constructor(code: ISharedRateErrorCode, message: string);
+    readonly code: ISharedRateErrorCode;
+}
 
 // @alpha
 export const stepLifecycle: IStepLifecycle;

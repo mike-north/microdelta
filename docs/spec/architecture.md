@@ -87,11 +87,20 @@ flowchart TD
 
 Execution-originated usage is submitted through an injected Accounting contract;
 Accounting does not import execution implementations. Persistence adapters
-implement ports owned by History or Accounting. Source/LLM adapters translate
-provider behavior into declared execution and accounting contracts. Inspection
-and CLI consume read/status interfaces and explicit run-control commands.
-Inspection alone must never invoke computation. No consumer may bypass a port by
-importing another context's private source, rows or mutable state.
+implement ports owned by History or Accounting, or the narrow Supervision
+observation port defined by [CLI-005](operations.md#cli-005--bounded-exact-execution-observation).
+Source/LLM adapters translate provider behavior into declared execution and
+accounting contracts. Inspection and CLI consume read/status interfaces and
+explicit run-control commands. Inspection alone must never invoke computation.
+No consumer may bypass a port by importing another context's private source,
+rows or mutable state.
+
+**Accepted narrow exception (root supervisory selection, 2026-10-25):** the
+exact-execution observation adapter persists one
+bounded latest observation owned by Supervision. Supervision owns its meaning,
+identity, transition ordering and publisher/reader contracts; Machine supplies
+host storage mechanics. This does not make Machine a domain owner, add a seventh
+context, or move History, Accounting or application-classification invariants.
 
 ## ARC-004 — Tracking remains independently usable
 

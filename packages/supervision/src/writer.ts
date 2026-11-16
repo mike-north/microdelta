@@ -72,6 +72,12 @@ export interface IWriterWait {
   readonly stop: IAbortSignal;
   /** The run, named in diagnostics. */
   readonly runId: string;
+  /**
+   * Private owner notification for the exact refusal constructed by this wait.
+   * Host port/timer failures never call it, even when shaped like stopped errors.
+   * Observers retain request-local provenance; absence preserves ordinary waiting.
+   */
+  readonly stopped?: (error: SupervisionError) => void;
 }
 
 /**
@@ -98,9 +104,13 @@ function nextAttemptAt(now: number, attempt: IWriterBusyObservation, policy: IWr
  * rejects with `stopped`. Either way the timer entry and the abort listener
  * are removed, so a settled sleep retains nothing.
  */
-function sleepUntil(timer: IRunTimer, at: number, stop: IAbortSignal, runId: string): Promise<void> {
+function sleepUntil(timer: IRunTimer, at: number, stop: IAbortSignal, runId: string, observe?: (error: SupervisionError) => void): Promise<void> {
   return new Promise<void>((resolve, reject) => {
-    const stopped = (): SupervisionError => new SupervisionError('stopped', `Run ${runId} is stopped: its wait for the writer lease ended`);
+    const stopped = (): SupervisionError => {
+      const error = new SupervisionError('stopped', `Run ${runId} is stopped: its wait for the writer lease ended`);
+      observe?.(error);
+      return error;
+    };
     if (stop.aborted) {
       reject(stopped());
       return;
@@ -141,7 +151,9 @@ export async function awaitWriter(wait: IWriterWait): Promise<IRunLease> {
       return attempt.lease;
     }
     if (wait.stop.aborted) {
-      throw new SupervisionError('stopped', `Run ${wait.runId} is stopped: it does not wait for the writer lease`);
+      const error = new SupervisionError('stopped', `Run ${wait.runId} is stopped: it does not wait for the writer lease`);
+      wait.stopped?.(error);
+      throw error;
     }
     const timer = wait.timer;
     if (timer === undefined) {
@@ -152,6 +164,6 @@ export async function awaitWriter(wait: IWriterWait): Promise<IRunLease> {
     if (deadline !== undefined && now >= deadline) {
       throw new WriterBusyError(attempt, deadline);
     }
-    await sleepUntil(timer, nextAttemptAt(now, attempt, wait.policy), wait.stop, wait.runId);
+    await sleepUntil(timer, nextAttemptAt(now, attempt, wait.policy), wait.stop, wait.runId, wait.stopped);
   }
 }

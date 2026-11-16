@@ -43,6 +43,8 @@ export type IMemberKey = 'person:ada' | 'person:ben';
 export interface IConfig {
   readonly repository: string;
   readonly window: { readonly start: string; readonly end: string };
+  /** Synthetic member keys used only by the keyed Resolution fixture. */
+  readonly keyedMembers?: readonly { readonly key: string }[];
 }
 
 /** One authored pull request as the fixture source reports it. */
@@ -549,7 +551,20 @@ function keyedDeclarations(builders: IDeclarations<IFamily>) {
   const contributors = source<IDiscoveredCollection>({
     subject: 'contributors:acme/widget:2026-Q1',
     collection: { identity: 'key' },
-    run: ({ outcome }) => outcome.fresh<IDiscoveredCollection>({ members: [], status: 'complete' }),
+    run: ({ inputs, outcome }) => {
+      // Cardinality is declared input data so the author callback reads it through its tracked view.
+      const members: IDiscovered[] = [];
+      const keyedMembers = inputs.config.keyedMembers;
+      if (keyedMembers !== undefined) {
+        for (let index = 0; index < keyedMembers.length; index += 1) {
+          const member = keyedMembers[index];
+          if (member !== undefined) {
+            members.push({ key: member.key });
+          }
+        }
+      }
+      return outcome.fresh<IDiscoveredCollection>({ members, status: 'complete' });
+    },
   });
   const contributor = template({
     slot: 'contributor',

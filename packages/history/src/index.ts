@@ -56,6 +56,13 @@ export {
   StaleWriterError,
 } from './durable/errors.js';
 export { openDurableHistory } from './durable/index.js';
+export { readHistorySelection } from './selection.js';
+export type {
+  IHistorySelectionLocation,
+  IHistorySelectionOptions,
+  IHistorySelectionRequest,
+  IHistorySelectionResult,
+} from './selection.js';
 export type {
   IAbandonRequest,
   IAcceptanceRecord,
@@ -100,6 +107,8 @@ export type {
   IClockCapability,
   ISha256Capability,
   ISqliteCapability,
+  ISqliteCoordinatedReadCapability,
+  ISqliteCoordinatedReadScope,
   ISqliteOpenOptions,
   ISqliteConnection,
   ISqliteRow,

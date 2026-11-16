@@ -1,0 +1,1554 @@
+{
+  "id": "Q2",
+  "conclusion": {
+    "id": "Q2",
+    "outcome": "unproved",
+    "pins": true,
+    "cleanup": true,
+    "measurement": false
+  },
+  "records": [
+    {
+      "stage": "W.profile",
+      "reply": {
+        "id": 1,
+        "kind": "ok",
+        "profile": {
+          "execPath": "/Users/mnorth/.nodenv/versions/24.14.0/bin/node",
+          "node": "v24.14.0",
+          "platform": "darwin",
+          "arch": "arm64",
+          "nativeByteOrder": "LE",
+          "pid": 49629,
+          "uid": 501,
+          "gid": 20,
+          "groups": [
+            20,
+            12,
+            61,
+            79,
+            80,
+            81,
+            702,
+            33,
+            98,
+            100,
+            204,
+            250,
+            395,
+            398,
+            399,
+            400
+          ],
+          "umask": 18,
+          "files": [
+            {
+              "suffix": "",
+              "stat": {
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, lstat '/private/tmp/issue302-native-author/source/Q2/store.sqlite'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "read": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-author/source/Q2/store.sqlite'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "readWrite": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-author/source/Q2/store.sqlite'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              }
+            },
+            {
+              "suffix": "-wal",
+              "stat": {
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, lstat '/private/tmp/issue302-native-author/source/Q2/store.sqlite-wal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "read": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-author/source/Q2/store.sqlite-wal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "readWrite": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-author/source/Q2/store.sqlite-wal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              }
+            },
+            {
+              "suffix": "-shm",
+              "stat": {
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, lstat '/private/tmp/issue302-native-author/source/Q2/store.sqlite-shm'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "read": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-author/source/Q2/store.sqlite-shm'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "readWrite": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-author/source/Q2/store.sqlite-shm'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              }
+            },
+            {
+              "suffix": "-journal",
+              "stat": {
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, lstat '/private/tmp/issue302-native-author/source/Q2/store.sqlite-journal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "read": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-author/source/Q2/store.sqlite-journal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "readWrite": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-author/source/Q2/store.sqlite-journal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              }
+            }
+          ],
+          "create": {
+            "ok": true
+          },
+          "filesystem": {
+            "type": 26,
+            "device": 16777229
+          },
+          "entry": "/Users/mnorth/.codex/worktrees/qualification-keyset-repair/perdure/.test-build/experiments/exp-wal-coordinated-snapshot/node/worker.js",
+          "entrySha256": "577902ad6a7f18cd0b83fca1ecd064ad0543888e520df2de145e30b7f3730226",
+          "bindingPackage": "/Users/mnorth/.codex/worktrees/qualification-keyset-repair/perdure/node_modules/better-sqlite3/package.json",
+          "packageSha256": "9d2524247288858cfba9fcd1636cf5540b95e87c4be0993eb61ecf9b2d0a8d14",
+          "binding": {
+            "name": "better-sqlite3",
+            "version": "12.9.0",
+            "description": "The fastest and simplest library for SQLite in Node.js.",
+            "homepage": "http://github.com/WiseLibs/better-sqlite3",
+            "author": "Joshua Wise <joshuathomaswise@gmail.com>",
+            "repository": {
+              "type": "git",
+              "url": "git://github.com/WiseLibs/better-sqlite3.git"
+            },
+            "main": "lib/index.js",
+            "files": [
+              "binding.gyp",
+              "src/**/*.[ch]pp",
+              "lib/**",
+              "deps/**"
+            ],
+            "engines": {
+              "node": "20.x || 22.x || 23.x || 24.x || 25.x"
+            },
+            "dependencies": {
+              "bindings": "^1.5.0",
+              "prebuild-install": "^7.1.1"
+            },
+            "overrides": {
+              "prebuild": {
+                "node-abi": "^4.25.0"
+              }
+            },
+            "devDependencies": {
+              "chai": "^4.3.8",
+              "cli-color": "^2.0.3",
+              "fs-extra": "^11.1.1",
+              "mocha": "^10.2.0",
+              "nodemark": "^0.3.0",
+              "prebuild": "^13.0.1",
+              "sqlite": "^5.0.1",
+              "sqlite3": "^5.1.6"
+            },
+            "scripts": {
+              "install": "prebuild-install || node-gyp rebuild --release",
+              "build-release": "node-gyp rebuild --release",
+              "build-debug": "node-gyp rebuild --debug",
+              "test": "mocha --exit --slow=75 --timeout=5000",
+              "benchmark": "node benchmark",
+              "download": "bash ./deps/download.sh"
+            },
+            "license": "MIT",
+            "keywords": [
+              "sql",
+              "sqlite",
+              "sqlite3",
+              "transactions",
+              "user-defined functions",
+              "aggregate functions",
+              "window functions",
+              "database"
+            ]
+          }
+        },
+        "facts": {
+          "open": false,
+          "inTransaction": null
+        }
+      }
+    },
+    {
+      "stage": "W.open",
+      "reply": {
+        "id": 2,
+        "kind": "ok",
+        "addon": {
+          "path": "/Users/mnorth/.codex/worktrees/qualification-keyset-repair/perdure/node_modules/better-sqlite3/build/Release/better_sqlite3.node",
+          "bytes": 1931680,
+          "sha256": "b3b473ef512e72914b7170855a8276aeee8a5868832e5cad821fe8234d04dc81"
+        },
+        "facts": {
+          "open": true,
+          "inTransaction": null
+        }
+      }
+    },
+    {
+      "stage": "W.init",
+      "reply": {
+        "id": 3,
+        "kind": "ok",
+        "facts": {
+          "open": true,
+          "inTransaction": null
+        }
+      }
+    },
+    {
+      "stage": "W.commitA",
+      "reply": {
+        "id": 4,
+        "kind": "ok",
+        "pair": {
+          "revision": 1,
+          "currentRevision": 1,
+          "value": "A"
+        },
+        "facts": {
+          "open": true,
+          "inTransaction": null
+        }
+      }
+    },
+    {
+      "stage": "W.checkpoint",
+      "reply": {
+        "id": 5,
+        "kind": "ok",
+        "checkpoint": [
+          {
+            "busy": 0,
+            "log": 0,
+            "checkpointed": 0
+          }
+        ],
+        "elapsed": 0.1303750000000008,
+        "facts": {
+          "open": true,
+          "inTransaction": null
+        }
+      }
+    },
+    {
+      "stage": "W.commitB",
+      "reply": {
+        "id": 6,
+        "kind": "ok",
+        "pair": {
+          "revision": 2,
+          "currentRevision": 2,
+          "value": "B"
+        },
+        "facts": {
+          "open": true,
+          "inTransaction": null
+        }
+      }
+    },
+    {
+      "stage": "R.profile",
+      "reply": {
+        "id": 1,
+        "kind": "ok",
+        "profile": {
+          "execPath": "/Users/mnorth/.nodenv/versions/24.14.0/bin/node",
+          "node": "v24.14.0",
+          "platform": "darwin",
+          "arch": "arm64",
+          "nativeByteOrder": "LE",
+          "pid": 49630,
+          "uid": 501,
+          "gid": 20,
+          "groups": [
+            20,
+            12,
+            61,
+            79,
+            80,
+            81,
+            702,
+            33,
+            98,
+            100,
+            204,
+            250,
+            395,
+            398,
+            399,
+            400
+          ],
+          "umask": 18,
+          "files": [
+            {
+              "suffix": "",
+              "stat": {
+                "mode": 33188,
+                "uid": 501,
+                "gid": 0,
+                "dev": 16777229,
+                "ino": 286242528,
+                "size": 12288,
+                "regular": true
+              },
+              "read": {
+                "ok": true
+              },
+              "readWrite": {
+                "ok": true
+              }
+            },
+            {
+              "suffix": "-wal",
+              "stat": {
+                "mode": 33188,
+                "uid": 501,
+                "gid": 0,
+                "dev": 16777229,
+                "ino": 286242530,
+                "size": 8272,
+                "regular": true
+              },
+              "read": {
+                "ok": true
+              },
+              "readWrite": {
+                "ok": true
+              }
+            },
+            {
+              "suffix": "-shm",
+              "stat": {
+                "mode": 33188,
+                "uid": 501,
+                "gid": 0,
+                "dev": 16777229,
+                "ino": 286242531,
+                "size": 32768,
+                "regular": true
+              },
+              "read": {
+                "ok": true
+              },
+              "readWrite": {
+                "ok": true
+              }
+            },
+            {
+              "suffix": "-journal",
+              "stat": {
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, lstat '/private/tmp/issue302-native-author/source/Q2/store.sqlite-journal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "read": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-author/source/Q2/store.sqlite-journal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "readWrite": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-author/source/Q2/store.sqlite-journal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              }
+            }
+          ],
+          "create": {
+            "ok": true
+          },
+          "filesystem": {
+            "type": 26,
+            "device": 16777229
+          },
+          "entry": "/Users/mnorth/.codex/worktrees/qualification-keyset-repair/perdure/.test-build/experiments/exp-wal-coordinated-snapshot/node/worker.js",
+          "entrySha256": "577902ad6a7f18cd0b83fca1ecd064ad0543888e520df2de145e30b7f3730226",
+          "bindingPackage": "/Users/mnorth/.codex/worktrees/qualification-keyset-repair/perdure/node_modules/better-sqlite3/package.json",
+          "packageSha256": "9d2524247288858cfba9fcd1636cf5540b95e87c4be0993eb61ecf9b2d0a8d14",
+          "binding": {
+            "name": "better-sqlite3",
+            "version": "12.9.0",
+            "description": "The fastest and simplest library for SQLite in Node.js.",
+            "homepage": "http://github.com/WiseLibs/better-sqlite3",
+            "author": "Joshua Wise <joshuathomaswise@gmail.com>",
+            "repository": {
+              "type": "git",
+              "url": "git://github.com/WiseLibs/better-sqlite3.git"
+            },
+            "main": "lib/index.js",
+            "files": [
+              "binding.gyp",
+              "src/**/*.[ch]pp",
+              "lib/**",
+              "deps/**"
+            ],
+            "engines": {
+              "node": "20.x || 22.x || 23.x || 24.x || 25.x"
+            },
+            "dependencies": {
+              "bindings": "^1.5.0",
+              "prebuild-install": "^7.1.1"
+            },
+            "overrides": {
+              "prebuild": {
+                "node-abi": "^4.25.0"
+              }
+            },
+            "devDependencies": {
+              "chai": "^4.3.8",
+              "cli-color": "^2.0.3",
+              "fs-extra": "^11.1.1",
+              "mocha": "^10.2.0",
+              "nodemark": "^0.3.0",
+              "prebuild": "^13.0.1",
+              "sqlite": "^5.0.1",
+              "sqlite3": "^5.1.6"
+            },
+            "scripts": {
+              "install": "prebuild-install || node-gyp rebuild --release",
+              "build-release": "node-gyp rebuild --release",
+              "build-debug": "node-gyp rebuild --debug",
+              "test": "mocha --exit --slow=75 --timeout=5000",
+              "benchmark": "node benchmark",
+              "download": "bash ./deps/download.sh"
+            },
+            "license": "MIT",
+            "keywords": [
+              "sql",
+              "sqlite",
+              "sqlite3",
+              "transactions",
+              "user-defined functions",
+              "aggregate functions",
+              "window functions",
+              "database"
+            ]
+          }
+        },
+        "facts": {
+          "open": false,
+          "inTransaction": null
+        }
+      }
+    },
+    {
+      "stage": "R.open",
+      "reply": {
+        "id": 2,
+        "kind": "ok",
+        "addon": {
+          "path": "/Users/mnorth/.codex/worktrees/qualification-keyset-repair/perdure/node_modules/better-sqlite3/build/Release/better_sqlite3.node",
+          "bytes": 1931680,
+          "sha256": "b3b473ef512e72914b7170855a8276aeee8a5868832e5cad821fe8234d04dc81"
+        },
+        "facts": {
+          "state": "opened",
+          "open": true,
+          "inTransaction": false,
+          "readonly": true
+        }
+      }
+    },
+    {
+      "stage": "R.begin",
+      "reply": {
+        "id": 3,
+        "kind": "ok",
+        "facts": {
+          "state": "active",
+          "open": true,
+          "inTransaction": true,
+          "readonly": true
+        }
+      }
+    },
+    {
+      "stage": "R.anchorB",
+      "reply": {
+        "id": 4,
+        "kind": "ok",
+        "pair": {
+          "revision": 2,
+          "currentRevision": 2,
+          "value": "B"
+        },
+        "facts": {
+          "state": "active",
+          "open": true,
+          "inTransaction": true,
+          "readonly": true
+        }
+      }
+    },
+    {
+      "stage": "W.commitC",
+      "reply": {
+        "id": 7,
+        "kind": "ok",
+        "pair": {
+          "revision": 3,
+          "currentRevision": 3,
+          "value": "C"
+        },
+        "facts": {
+          "open": true,
+          "inTransaction": null
+        }
+      }
+    },
+    {
+      "stage": "R.readB",
+      "reply": {
+        "id": 5,
+        "kind": "ok",
+        "pair": {
+          "revision": 2,
+          "currentRevision": 2,
+          "value": "B"
+        },
+        "facts": {
+          "state": "active",
+          "open": true,
+          "inTransaction": true,
+          "readonly": true
+        }
+      }
+    },
+    {
+      "stage": "R.runtime",
+      "reply": {
+        "id": 6,
+        "kind": "ok",
+        "runtime": {
+          "version": {
+            "version": "3.53.0",
+            "source_id": "2026-04-09 11:41:38 4525003a53a7fc63ca75c59b22c79608659ca12f0131f52c18637f829977f20b"
+          },
+          "options": [
+            {
+              "compile_options": "ATOMIC_INTRINSICS=1"
+            },
+            {
+              "compile_options": "COMPILER=clang-17.0.0"
+            },
+            {
+              "compile_options": "DEFAULT_AUTOVACUUM"
+            },
+            {
+              "compile_options": "DEFAULT_CACHE_SIZE=-16000"
+            },
+            {
+              "compile_options": "DEFAULT_FILE_FORMAT=4"
+            },
+            {
+              "compile_options": "DEFAULT_FOREIGN_KEYS"
+            },
+            {
+              "compile_options": "DEFAULT_JOURNAL_SIZE_LIMIT=-1"
+            },
+            {
+              "compile_options": "DEFAULT_MEMSTATUS=0"
+            },
+            {
+              "compile_options": "DEFAULT_MMAP_SIZE=0"
+            },
+            {
+              "compile_options": "DEFAULT_PAGE_SIZE=4096"
+            },
+            {
+              "compile_options": "DEFAULT_PCACHE_INITSZ=20"
+            },
+            {
+              "compile_options": "DEFAULT_RECURSIVE_TRIGGERS"
+            },
+            {
+              "compile_options": "DEFAULT_SECTOR_SIZE=4096"
+            },
+            {
+              "compile_options": "DEFAULT_SYNCHRONOUS=2"
+            },
+            {
+              "compile_options": "DEFAULT_WAL_AUTOCHECKPOINT=1000"
+            },
+            {
+              "compile_options": "DEFAULT_WAL_SYNCHRONOUS=1"
+            },
+            {
+              "compile_options": "DEFAULT_WORKER_THREADS=0"
+            },
+            {
+              "compile_options": "DIRECT_OVERFLOW_READ"
+            },
+            {
+              "compile_options": "DQS=0"
+            },
+            {
+              "compile_options": "ENABLE_COLUMN_METADATA"
+            },
+            {
+              "compile_options": "ENABLE_DBSTAT_VTAB"
+            },
+            {
+              "compile_options": "ENABLE_FTS3"
+            },
+            {
+              "compile_options": "ENABLE_FTS3_PARENTHESIS"
+            },
+            {
+              "compile_options": "ENABLE_FTS4"
+            },
+            {
+              "compile_options": "ENABLE_FTS5"
+            },
+            {
+              "compile_options": "ENABLE_GEOPOLY"
+            },
+            {
+              "compile_options": "ENABLE_MATH_FUNCTIONS"
+            },
+            {
+              "compile_options": "ENABLE_RTREE"
+            },
+            {
+              "compile_options": "ENABLE_STAT4"
+            },
+            {
+              "compile_options": "ENABLE_UPDATE_DELETE_LIMIT"
+            },
+            {
+              "compile_options": "LIKE_DOESNT_MATCH_BLOBS"
+            },
+            {
+              "compile_options": "MALLOC_SOFT_LIMIT=1024"
+            },
+            {
+              "compile_options": "MAX_ATTACHED=10"
+            },
+            {
+              "compile_options": "MAX_COLUMN=2000"
+            },
+            {
+              "compile_options": "MAX_COMPOUND_SELECT=500"
+            },
+            {
+              "compile_options": "MAX_DEFAULT_PAGE_SIZE=8192"
+            },
+            {
+              "compile_options": "MAX_EXPR_DEPTH=1000"
+            },
+            {
+              "compile_options": "MAX_FUNCTION_ARG=1000"
+            },
+            {
+              "compile_options": "MAX_LENGTH=1000000000"
+            },
+            {
+              "compile_options": "MAX_LIKE_PATTERN_LENGTH=50000"
+            },
+            {
+              "compile_options": "MAX_MMAP_SIZE=0x7fff0000"
+            },
+            {
+              "compile_options": "MAX_PAGE_COUNT=0xfffffffe"
+            },
+            {
+              "compile_options": "MAX_PAGE_SIZE=65536"
+            },
+            {
+              "compile_options": "MAX_SQL_LENGTH=1000000000"
+            },
+            {
+              "compile_options": "MAX_TRIGGER_DEPTH=1000"
+            },
+            {
+              "compile_options": "MAX_VARIABLE_NUMBER=32766"
+            },
+            {
+              "compile_options": "MAX_VDBE_OP=250000000"
+            },
+            {
+              "compile_options": "MAX_WORKER_THREADS=8"
+            },
+            {
+              "compile_options": "MUTEX_PTHREADS"
+            },
+            {
+              "compile_options": "OMIT_DEPRECATED"
+            },
+            {
+              "compile_options": "OMIT_PROGRESS_CALLBACK"
+            },
+            {
+              "compile_options": "OMIT_SHARED_CACHE"
+            },
+            {
+              "compile_options": "OMIT_TCL_VARIABLE"
+            },
+            {
+              "compile_options": "SOUNDEX"
+            },
+            {
+              "compile_options": "SYSTEM_MALLOC"
+            },
+            {
+              "compile_options": "TEMP_STORE=1"
+            },
+            {
+              "compile_options": "THREADSAFE=2"
+            },
+            {
+              "compile_options": "USE_URI"
+            }
+          ]
+        },
+        "facts": {
+          "state": "active",
+          "open": true,
+          "inTransaction": true,
+          "readonly": true
+        }
+      }
+    },
+    {
+      "stage": "W.close",
+      "reply": {
+        "id": 8,
+        "kind": "ok",
+        "cleanup": {
+          "kind": "closed",
+          "failures": []
+        },
+        "facts": {
+          "open": false,
+          "inTransaction": null
+        }
+      }
+    },
+    {
+      "stage": "W.exit",
+      "reply": {
+        "id": 9,
+        "kind": "exiting",
+        "cleanup": {
+          "kind": "closed",
+          "failures": []
+        },
+        "facts": {
+          "open": false,
+          "inTransaction": null
+        }
+      },
+      "exit": {
+        "code": 0,
+        "signal": null
+      }
+    },
+    {
+      "stage": "R.end",
+      "reply": {
+        "id": 7,
+        "kind": "ok",
+        "facts": {
+          "state": "ended",
+          "open": true,
+          "inTransaction": false,
+          "readonly": true
+        }
+      }
+    },
+    {
+      "stage": "R.close",
+      "reply": {
+        "id": 8,
+        "kind": "ok",
+        "cleanup": {
+          "kind": "closed",
+          "failures": []
+        },
+        "facts": {
+          "state": "closed",
+          "open": false,
+          "inTransaction": false,
+          "readonly": true
+        }
+      }
+    },
+    {
+      "stage": "R.exit",
+      "reply": {
+        "id": 9,
+        "kind": "exiting",
+        "cleanup": {
+          "kind": "closed",
+          "failures": []
+        },
+        "facts": {
+          "state": "closed",
+          "open": false,
+          "inTransaction": false,
+          "readonly": true
+        }
+      },
+      "exit": {
+        "code": 0,
+        "signal": null
+      }
+    },
+    {
+      "stage": "R2.profile",
+      "reply": {
+        "id": 1,
+        "kind": "ok",
+        "profile": {
+          "execPath": "/Users/mnorth/.nodenv/versions/24.14.0/bin/node",
+          "node": "v24.14.0",
+          "platform": "darwin",
+          "arch": "arm64",
+          "nativeByteOrder": "LE",
+          "pid": 49631,
+          "uid": 501,
+          "gid": 20,
+          "groups": [
+            20,
+            12,
+            61,
+            79,
+            80,
+            81,
+            702,
+            33,
+            98,
+            100,
+            204,
+            250,
+            395,
+            398,
+            399,
+            400
+          ],
+          "umask": 18,
+          "files": [
+            {
+              "suffix": "",
+              "stat": {
+                "mode": 33188,
+                "uid": 501,
+                "gid": 0,
+                "dev": 16777229,
+                "ino": 286242528,
+                "size": 12288,
+                "regular": true
+              },
+              "read": {
+                "ok": true
+              },
+              "readWrite": {
+                "ok": true
+              }
+            },
+            {
+              "suffix": "-wal",
+              "stat": {
+                "mode": 33188,
+                "uid": 501,
+                "gid": 0,
+                "dev": 16777229,
+                "ino": 286242530,
+                "size": 16512,
+                "regular": true
+              },
+              "read": {
+                "ok": true
+              },
+              "readWrite": {
+                "ok": true
+              }
+            },
+            {
+              "suffix": "-shm",
+              "stat": {
+                "mode": 33188,
+                "uid": 501,
+                "gid": 0,
+                "dev": 16777229,
+                "ino": 286242531,
+                "size": 32768,
+                "regular": true
+              },
+              "read": {
+                "ok": true
+              },
+              "readWrite": {
+                "ok": true
+              }
+            },
+            {
+              "suffix": "-journal",
+              "stat": {
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, lstat '/private/tmp/issue302-native-author/source/Q2/store.sqlite-journal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "read": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-author/source/Q2/store.sqlite-journal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "readWrite": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-author/source/Q2/store.sqlite-journal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              }
+            }
+          ],
+          "create": {
+            "ok": true
+          },
+          "filesystem": {
+            "type": 26,
+            "device": 16777229
+          },
+          "entry": "/Users/mnorth/.codex/worktrees/qualification-keyset-repair/perdure/.test-build/experiments/exp-wal-coordinated-snapshot/node/worker.js",
+          "entrySha256": "577902ad6a7f18cd0b83fca1ecd064ad0543888e520df2de145e30b7f3730226",
+          "bindingPackage": "/Users/mnorth/.codex/worktrees/qualification-keyset-repair/perdure/node_modules/better-sqlite3/package.json",
+          "packageSha256": "9d2524247288858cfba9fcd1636cf5540b95e87c4be0993eb61ecf9b2d0a8d14",
+          "binding": {
+            "name": "better-sqlite3",
+            "version": "12.9.0",
+            "description": "The fastest and simplest library for SQLite in Node.js.",
+            "homepage": "http://github.com/WiseLibs/better-sqlite3",
+            "author": "Joshua Wise <joshuathomaswise@gmail.com>",
+            "repository": {
+              "type": "git",
+              "url": "git://github.com/WiseLibs/better-sqlite3.git"
+            },
+            "main": "lib/index.js",
+            "files": [
+              "binding.gyp",
+              "src/**/*.[ch]pp",
+              "lib/**",
+              "deps/**"
+            ],
+            "engines": {
+              "node": "20.x || 22.x || 23.x || 24.x || 25.x"
+            },
+            "dependencies": {
+              "bindings": "^1.5.0",
+              "prebuild-install": "^7.1.1"
+            },
+            "overrides": {
+              "prebuild": {
+                "node-abi": "^4.25.0"
+              }
+            },
+            "devDependencies": {
+              "chai": "^4.3.8",
+              "cli-color": "^2.0.3",
+              "fs-extra": "^11.1.1",
+              "mocha": "^10.2.0",
+              "nodemark": "^0.3.0",
+              "prebuild": "^13.0.1",
+              "sqlite": "^5.0.1",
+              "sqlite3": "^5.1.6"
+            },
+            "scripts": {
+              "install": "prebuild-install || node-gyp rebuild --release",
+              "build-release": "node-gyp rebuild --release",
+              "build-debug": "node-gyp rebuild --debug",
+              "test": "mocha --exit --slow=75 --timeout=5000",
+              "benchmark": "node benchmark",
+              "download": "bash ./deps/download.sh"
+            },
+            "license": "MIT",
+            "keywords": [
+              "sql",
+              "sqlite",
+              "sqlite3",
+              "transactions",
+              "user-defined functions",
+              "aggregate functions",
+              "window functions",
+              "database"
+            ]
+          }
+        },
+        "facts": {
+          "open": false,
+          "inTransaction": null
+        }
+      }
+    },
+    {
+      "stage": "R2.open",
+      "reply": {
+        "id": 2,
+        "kind": "ok",
+        "addon": {
+          "path": "/Users/mnorth/.codex/worktrees/qualification-keyset-repair/perdure/node_modules/better-sqlite3/build/Release/better_sqlite3.node",
+          "bytes": 1931680,
+          "sha256": "b3b473ef512e72914b7170855a8276aeee8a5868832e5cad821fe8234d04dc81"
+        },
+        "facts": {
+          "state": "opened",
+          "open": true,
+          "inTransaction": false,
+          "readonly": true
+        }
+      }
+    },
+    {
+      "stage": "R2.begin",
+      "reply": {
+        "id": 3,
+        "kind": "ok",
+        "facts": {
+          "state": "active",
+          "open": true,
+          "inTransaction": true,
+          "readonly": true
+        }
+      }
+    },
+    {
+      "stage": "R2.anchorC",
+      "reply": {
+        "id": 4,
+        "kind": "ok",
+        "pair": {
+          "revision": 3,
+          "currentRevision": 3,
+          "value": "C"
+        },
+        "facts": {
+          "state": "active",
+          "open": true,
+          "inTransaction": true,
+          "readonly": true
+        }
+      }
+    },
+    {
+      "stage": "R2.runtime",
+      "reply": {
+        "id": 5,
+        "kind": "ok",
+        "runtime": {
+          "version": {
+            "version": "3.53.0",
+            "source_id": "2026-04-09 11:41:38 4525003a53a7fc63ca75c59b22c79608659ca12f0131f52c18637f829977f20b"
+          },
+          "options": [
+            {
+              "compile_options": "ATOMIC_INTRINSICS=1"
+            },
+            {
+              "compile_options": "COMPILER=clang-17.0.0"
+            },
+            {
+              "compile_options": "DEFAULT_AUTOVACUUM"
+            },
+            {
+              "compile_options": "DEFAULT_CACHE_SIZE=-16000"
+            },
+            {
+              "compile_options": "DEFAULT_FILE_FORMAT=4"
+            },
+            {
+              "compile_options": "DEFAULT_FOREIGN_KEYS"
+            },
+            {
+              "compile_options": "DEFAULT_JOURNAL_SIZE_LIMIT=-1"
+            },
+            {
+              "compile_options": "DEFAULT_MEMSTATUS=0"
+            },
+            {
+              "compile_options": "DEFAULT_MMAP_SIZE=0"
+            },
+            {
+              "compile_options": "DEFAULT_PAGE_SIZE=4096"
+            },
+            {
+              "compile_options": "DEFAULT_PCACHE_INITSZ=20"
+            },
+            {
+              "compile_options": "DEFAULT_RECURSIVE_TRIGGERS"
+            },
+            {
+              "compile_options": "DEFAULT_SECTOR_SIZE=4096"
+            },
+            {
+              "compile_options": "DEFAULT_SYNCHRONOUS=2"
+            },
+            {
+              "compile_options": "DEFAULT_WAL_AUTOCHECKPOINT=1000"
+            },
+            {
+              "compile_options": "DEFAULT_WAL_SYNCHRONOUS=1"
+            },
+            {
+              "compile_options": "DEFAULT_WORKER_THREADS=0"
+            },
+            {
+              "compile_options": "DIRECT_OVERFLOW_READ"
+            },
+            {
+              "compile_options": "DQS=0"
+            },
+            {
+              "compile_options": "ENABLE_COLUMN_METADATA"
+            },
+            {
+              "compile_options": "ENABLE_DBSTAT_VTAB"
+            },
+            {
+              "compile_options": "ENABLE_FTS3"
+            },
+            {
+              "compile_options": "ENABLE_FTS3_PARENTHESIS"
+            },
+            {
+              "compile_options": "ENABLE_FTS4"
+            },
+            {
+              "compile_options": "ENABLE_FTS5"
+            },
+            {
+              "compile_options": "ENABLE_GEOPOLY"
+            },
+            {
+              "compile_options": "ENABLE_MATH_FUNCTIONS"
+            },
+            {
+              "compile_options": "ENABLE_RTREE"
+            },
+            {
+              "compile_options": "ENABLE_STAT4"
+            },
+            {
+              "compile_options": "ENABLE_UPDATE_DELETE_LIMIT"
+            },
+            {
+              "compile_options": "LIKE_DOESNT_MATCH_BLOBS"
+            },
+            {
+              "compile_options": "MALLOC_SOFT_LIMIT=1024"
+            },
+            {
+              "compile_options": "MAX_ATTACHED=10"
+            },
+            {
+              "compile_options": "MAX_COLUMN=2000"
+            },
+            {
+              "compile_options": "MAX_COMPOUND_SELECT=500"
+            },
+            {
+              "compile_options": "MAX_DEFAULT_PAGE_SIZE=8192"
+            },
+            {
+              "compile_options": "MAX_EXPR_DEPTH=1000"
+            },
+            {
+              "compile_options": "MAX_FUNCTION_ARG=1000"
+            },
+            {
+              "compile_options": "MAX_LENGTH=1000000000"
+            },
+            {
+              "compile_options": "MAX_LIKE_PATTERN_LENGTH=50000"
+            },
+            {
+              "compile_options": "MAX_MMAP_SIZE=0x7fff0000"
+            },
+            {
+              "compile_options": "MAX_PAGE_COUNT=0xfffffffe"
+            },
+            {
+              "compile_options": "MAX_PAGE_SIZE=65536"
+            },
+            {
+              "compile_options": "MAX_SQL_LENGTH=1000000000"
+            },
+            {
+              "compile_options": "MAX_TRIGGER_DEPTH=1000"
+            },
+            {
+              "compile_options": "MAX_VARIABLE_NUMBER=32766"
+            },
+            {
+              "compile_options": "MAX_VDBE_OP=250000000"
+            },
+            {
+              "compile_options": "MAX_WORKER_THREADS=8"
+            },
+            {
+              "compile_options": "MUTEX_PTHREADS"
+            },
+            {
+              "compile_options": "OMIT_DEPRECATED"
+            },
+            {
+              "compile_options": "OMIT_PROGRESS_CALLBACK"
+            },
+            {
+              "compile_options": "OMIT_SHARED_CACHE"
+            },
+            {
+              "compile_options": "OMIT_TCL_VARIABLE"
+            },
+            {
+              "compile_options": "SOUNDEX"
+            },
+            {
+              "compile_options": "SYSTEM_MALLOC"
+            },
+            {
+              "compile_options": "TEMP_STORE=1"
+            },
+            {
+              "compile_options": "THREADSAFE=2"
+            },
+            {
+              "compile_options": "USE_URI"
+            }
+          ]
+        },
+        "facts": {
+          "state": "active",
+          "open": true,
+          "inTransaction": true,
+          "readonly": true
+        }
+      }
+    },
+    {
+      "stage": "R2.end",
+      "reply": {
+        "id": 6,
+        "kind": "ok",
+        "facts": {
+          "state": "ended",
+          "open": true,
+          "inTransaction": false,
+          "readonly": true
+        }
+      }
+    },
+    {
+      "stage": "R2.close",
+      "reply": {
+        "id": 7,
+        "kind": "ok",
+        "cleanup": {
+          "kind": "closed",
+          "failures": []
+        },
+        "facts": {
+          "state": "closed",
+          "open": false,
+          "inTransaction": false,
+          "readonly": true
+        }
+      }
+    },
+    {
+      "stage": "R2.exit",
+      "reply": {
+        "id": 8,
+        "kind": "exiting",
+        "cleanup": {
+          "kind": "closed",
+          "failures": []
+        },
+        "facts": {
+          "state": "closed",
+          "open": false,
+          "inTransaction": false,
+          "readonly": true
+        }
+      },
+      "exit": {
+        "code": 0,
+        "signal": null
+      }
+    }
+  ],
+  "images": [
+    {
+      "label": "W.checkpoint",
+      "stages": [
+        "W.profile",
+        "W.open",
+        "W.init",
+        "W.commitA",
+        "W.checkpoint"
+      ],
+      "attribution": "owner-or-fixture",
+      "complete": true,
+      "metadata": "image-0.json"
+    },
+    {
+      "label": "W.commitB",
+      "stages": [
+        "W.commitB"
+      ],
+      "attribution": "owner-or-fixture",
+      "complete": true,
+      "metadata": "image-1.json"
+    },
+    {
+      "label": "R.open",
+      "stages": [
+        "R.profile",
+        "R.open"
+      ],
+      "attribution": "reader-only",
+      "complete": true,
+      "metadata": "image-2.json"
+    },
+    {
+      "label": "R.begin",
+      "stages": [
+        "R.begin"
+      ],
+      "attribution": "reader-only",
+      "complete": true,
+      "metadata": "image-3.json"
+    },
+    {
+      "label": "R.anchorB",
+      "stages": [
+        "R.anchorB"
+      ],
+      "attribution": "reader-only",
+      "complete": true,
+      "metadata": "image-4.json"
+    },
+    {
+      "label": "W.commitC",
+      "stages": [
+        "W.commitC"
+      ],
+      "attribution": "owner-or-fixture",
+      "complete": true,
+      "metadata": "image-5.json"
+    },
+    {
+      "label": "R.readB",
+      "stages": [
+        "R.readB"
+      ],
+      "attribution": "reader-only",
+      "complete": true,
+      "metadata": "image-6.json"
+    },
+    {
+      "label": "R.runtime",
+      "stages": [
+        "R.runtime"
+      ],
+      "attribution": "reader-only",
+      "complete": true,
+      "metadata": "image-7.json"
+    },
+    {
+      "label": "W.exit",
+      "stages": [
+        "W.close",
+        "W.exit"
+      ],
+      "attribution": "owner-or-fixture",
+      "complete": true,
+      "metadata": "image-8.json"
+    },
+    {
+      "label": "R.close",
+      "stages": [
+        "R.end",
+        "R.close"
+      ],
+      "attribution": "reader-only",
+      "complete": true,
+      "metadata": "image-9.json"
+    },
+    {
+      "label": "R.exit",
+      "stages": [
+        "R.exit"
+      ],
+      "attribution": "reader-only",
+      "complete": true,
+      "metadata": "image-10.json"
+    },
+    {
+      "label": "R2.exit",
+      "stages": [
+        "R2.profile",
+        "R2.open",
+        "R2.begin",
+        "R2.anchorC",
+        "R2.runtime",
+        "R2.end",
+        "R2.close",
+        "R2.exit"
+      ],
+      "attribution": "reader-only",
+      "complete": true,
+      "metadata": "image-11.json"
+    }
+  ],
+  "effects": [],
+  "physicalEffects": {
+    "allowed": [],
+    "forbidden": [],
+    "unknown": [
+      {
+        "file": "store.sqlite-shm",
+        "reason": "SHM content change lacks recognized first-attacher or read-mark transition",
+        "before": {
+          "dev": 16777229,
+          "ino": 286242531,
+          "size": 32768,
+          "sha256": "91bf3341fc1cb5d5297c348bcd50983951c1e26594e2c07ed9affacbef97d6ae"
+        },
+        "after": {
+          "dev": 16777229,
+          "ino": 286242531,
+          "size": 32768,
+          "sha256": "41e2982cd728bcc6356975b6c0ff80754bb1158c69b72aedd9652d1ad8c132a4"
+        },
+        "changedRanges": [
+          {
+            "start": 8,
+            "end": 9
+          },
+          {
+            "start": 40,
+            "end": 41
+          },
+          {
+            "start": 44,
+            "end": 45
+          },
+          {
+            "start": 56,
+            "end": 57
+          },
+          {
+            "start": 88,
+            "end": 89
+          },
+          {
+            "start": 92,
+            "end": 93
+          },
+          {
+            "start": 104,
+            "end": 105
+          },
+          {
+            "start": 108,
+            "end": 112
+          },
+          {
+            "start": 128,
+            "end": 129
+          }
+        ]
+      }
+    ]
+  },
+  "failures": [],
+  "measurementClosure": null,
+  "fixtureReady": true
+}

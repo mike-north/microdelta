@@ -1,19 +1,21 @@
 # Retry classification implementation handoff
 
-Status: scoped follow-up issue draft under [#220](https://github.com/mike-north/microdelta/issues/220),
-not a runtime delivery claim or permission to begin implementation before design
-acceptance. The [design candidate](retry-classification.md) owns the proposed
-engineering details; RUN-011, RUN-012/014/017 and A-12d/i own accepted semantics.
+Status: accepted scoped runtime handoff from [#220](https://github.com/mike-north/microdelta/issues/220)
+for [#235](https://github.com/mike-north/microdelta/issues/235). This handoff is
+not a runtime delivery claim; the [accepted design](retry-classification.md)
+owns its engineering details, while RUN-011, RUN-012/014/017 and A-12d/i own
+accepted semantics.
 
 ## Task and readiness
 
 Implement the reusable alpha retry-classification seam on the direct operation
-path after #213 is accepted and its actual API/journal changes are reconciled.
-Do not duplicate its allowance counter, public/private run identity handling,
-intent/fence protocol, unknown-usage records or backoff defaults. The supervisor
-must accept the #220 design and record any review revisions before marking this
-follow-up ready. No additional owner question is required for routine interface
-spelling consistent with the design; raise demonstrated semantic conflicts.
+path, reconciling #213's accepted API/journal changes and #214's retained
+exhaustion behavior. Do not duplicate the allowance counter, public/private run
+identity handling, intent/fence protocol, unknown-usage records or backoff
+defaults. The #220 design has supervisory acceptance; record review revisions
+against that decision. No additional owner question is required for routine
+interface spelling consistent with the design; raise demonstrated semantic
+conflicts.
 
 Supervision owns policy normalization, exact matching, attempt/history snapshots,
 async decision lifecycle, durable chosen delays and independent gate rechecks.

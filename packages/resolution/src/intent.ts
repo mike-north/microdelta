@@ -63,7 +63,7 @@ export function attemptKey(host: ISha256Capability, requestKey: string, step: IB
  * canonical output encoding (MDS1). The validation observer's capture holds
  * only this framework selection; no author capture is involved.
  */
-function inputContent(validation: ITrackingObserver, slots: ICurrentSlots): string {
+export function inputContent(validation: ITrackingObserver, slots: ICurrentSlots): string {
   // Slot order is declaration layout, not intent: fingerprint the record in slot-name order.
   const record = Object.fromEntries(Object.entries(inputRecord(slots)).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0));
   const view = validation.tracked(record, { path: bindingPaths.inputs });
@@ -85,6 +85,8 @@ export function intentDigest<TInputs extends object, THelpers extends object>(op
   readonly step: IBindingDescriptor;
   readonly declaration: IStepDeclaration<IResolutionFamily<TInputs, THelpers>>;
   readonly slots: ICurrentSlots;
+  /** A request may provide the same complete fact after its first lazy derivation. */
+  readonly preparedInputContent?: () => string;
 }): string {
   const { declaration } = options;
   const children = declaration.kind === 'memo'
@@ -109,8 +111,10 @@ export function intentDigest<TInputs extends object, THelpers extends object>(op
       .filter((edge) => edge.child.role === 'callable')
       .map((edge) => {
         const resolution = options.composition.resolve(edge.child);
-        return resolution.status === 'bound' && resolution.target.role === 'callable' && resolution.target.kind === 'supplied-step'
-          ? [edge.child.slot, resolution.target.declaration.version, sourceText(resolution.target.declaration.run)]
+        return resolution.status === 'bound' && resolution.target.role === 'callable' && (resolution.target.kind === 'supplied-step' || resolution.target.kind === 'supplied-source')
+          ? resolution.target.declaration.kind === 'supplied-source'
+            ? [edge.child.slot, 'supplied-source', resolution.target.declaration.version, sourceText(resolution.target.declaration.run), sourceText(resolution.target.declaration.finality)]
+            : [edge.child.slot, resolution.target.declaration.version, sourceText(resolution.target.declaration.run)]
           : [edge.child.slot, resolution.status];
       })
     : [];
@@ -127,7 +131,7 @@ export function intentDigest<TInputs extends object, THelpers extends object>(op
     sourceText(declaration.run),
     declaration.kind === 'source' ? sourceText(declaration.finality) : null,
     children,
-    ...currentBindings(options.validation, options.slots),
+    ...currentBindings(options.validation, options.slots, options.preparedInputContent),
     // Appended only for nested parents, so every M3 intent digest is unchanged.
     ...(slotChildren.length === 0 ? [] : [slotChildren]),
     // Appended only for strict and outcome folds: the template step whose members the fold consumes.
@@ -137,11 +141,11 @@ export function intentDigest<TInputs extends object, THelpers extends object>(op
 }
 
 /** The declared input slot states, the current input content and the helper slots with their source text. */
-function currentBindings(validation: ITrackingObserver, slots: ICurrentSlots): readonly unknown[] {
+function currentBindings(validation: ITrackingObserver, slots: ICurrentSlots, preparedInputContent?: () => string): readonly unknown[] {
   const inputs = [...slots.inputs].sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0).map(([slot, state]) => [slot, state.status]);
   const helpers = [...slots.helpers].sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
     .map(([slot, state]) => [slot, state.status, state.status === 'bound' ? sourceText(state.value) : null]);
-  return [inputs, inputContent(validation, slots), helpers];
+  return [inputs, preparedInputContent === undefined ? inputContent(validation, slots) : preparedInputContent(), helpers];
 }
 
 /** The structural tuple of the template step a fold consumes, or null when the composition declares no such fold. */
@@ -159,7 +163,9 @@ function descriptorKey(descriptor: IBindingDescriptor): string {
  * The complete current intent of one supplied step call: History scope, the
  * callable slot, its call's subject and compatibility version, the argument
  * digest, the source text of the implementation currently supplied and the
- * current input and helper bindings.
+ * current input and helper bindings. Callable source intent also names its
+ * source kind and current finality hook. The memo tuple stays byte-compatible
+ * with existing saved requests; source metadata extends only source calls.
  */
 export function suppliedIntentDigest(options: {
   readonly host: ISha256Capability;
@@ -170,8 +176,11 @@ export function suppliedIntentDigest(options: {
   readonly subject: string;
   readonly version: number;
   readonly arguments: string;
+  readonly source?: { readonly finality: unknown };
   readonly run: unknown;
   readonly slots: ICurrentSlots;
+  /** A request may provide the same complete fact after its first lazy derivation. */
+  readonly preparedInputContent?: () => string;
 }): string {
   const intent = [
     'microdelta.resolution.intent',
@@ -179,12 +188,13 @@ export function suppliedIntentDigest(options: {
     options.scope,
     options.environment,
     structural(options.slot),
-    'supplied',
+    options.source === undefined ? 'supplied' : 'source',
     options.subject,
     options.version,
     options.arguments,
     sourceText(options.run),
-    ...currentBindings(options.validation, options.slots),
+    ...(options.source === undefined ? [] : [sourceText(options.source.finality)]),
+    ...currentBindings(options.validation, options.slots, options.preparedInputContent),
   ];
   return `mdi1:${options.host.sha256(JSON.stringify(intent))}`;
 }

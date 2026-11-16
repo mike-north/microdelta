@@ -23,6 +23,14 @@ import type { MemoryStoreOptions, Store } from '@microdelta/history';
 export { HistoryBusyError } from '@microdelta/history';
 
 import { machine } from './host.js';
+export { defineCliWorkload } from './cli-workload.js';
+export type { ICliWorkload, ICliWorkloadPreparation } from './cli-workload.js';
+export { readHistorySelection } from './history-selection.js';
+export type {
+  IHistorySelectionLocation,
+  IHistorySelectionRequest,
+  IHistorySelectionResult,
+} from './history-selection.js';
 
 /**
  * Create the existing non-durable memory store with Node's detached snapshot
@@ -89,12 +97,17 @@ export {
   type IPathInput,
   type IPreviousResult,
   type IResultView,
+  type IRootAcquisitionWitness,
+  type ITraversalDeclaration,
   type ISkippedEntry,
   type ISlotSubject,
   type ISourceOutcome,
   type ISourceOutcomes,
   type IStepDescriptor,
   type IStepSlot,
+  type ISourceSlot,
+  type ISuppliedSourceDeclaration,
+  type ISuppliedSourceRegistration,
   type ISucceededEntry,
   type ISuppliedStepDeclaration,
   type ISuppliedStepRegistration,
@@ -126,6 +139,9 @@ export {
   type IFoldCoverage,
   type IFoldOutcome,
   type IFoldReport,
+  type ITraversalAdapter,
+  type ITraversalAdaptation,
+  type ITraversalReport,
   type IGateEvidence,
   type IIncompleteOutcomeFoldCoverage,
   type ILifecycleEvent,
@@ -142,8 +158,20 @@ export {
   type IOperationReason,
   type IOperationRemoteState,
   type IOperationRequest,
+  type IOperationSharedRate,
+  type ISharedRateSurface,
+  type ISharedRateSurfaceDeclaration,
+  registerSharedRateSurface,
   type IOperationResponse,
   type IOperationRetryPolicy,
+  type IRetryDecision,
+  type IRetryDecisionInput,
+  type IRetryAttemptSummary,
+  type IRetryFacts,
+  type IRetryHistory,
+  type IRetryOutcome,
+  type IRetrySourceScope,
+  type ISourceRetryPolicy,
   type IOperationSend,
   type IOperationSettlement,
   type IOperationSettlementRecord,
@@ -172,6 +200,18 @@ export {
   type IRunExecution,
   type IRunObserver,
   type IRunResult,
+  openExecutionObservationReader,
+  type IApplicationStatement,
+  type IApplicationStatementSubmission,
+  type IExecutionObservation,
+  type IExecutionObservationEventCounts,
+  type IExecutionObservationFaultCount,
+  type IExecutionObservationLocator,
+  type IExecutionObservationReader,
+  type IExecutionObservationReadResult,
+  type IExecutionObservationReadState,
+  type IObservationAcknowledgment,
+  type IObservedRun,
   type ISendInterruption,
   type ISendPhase,
   type ISendRequest,

@@ -20,6 +20,7 @@ import type { ITracked } from '@microdelta/tracking';
 import type { ITrackedView } from '@microdelta/tracking';
 import type { ITrackingObservation } from '@microdelta/tracking';
 import type { ITrackingObserver } from '@microdelta/tracking';
+import type { ITraversalBinding } from '@microdelta/definition';
 import type { ITypeFamily } from '@microdelta/definition';
 import type { IUntrackedKey } from '@microdelta/tracking';
 import type { IVersionedSubject } from '@microdelta/history';
@@ -27,6 +28,18 @@ import type { IWriterLease } from '@microdelta/history';
 
 // @alpha
 export function createResolution<TInputs extends object, THelpers extends object>(options: IResolutionOptions<TInputs, THelpers>): IResolution;
+
+// @alpha
+export interface IAcquiredPage {
+    // (undocumented)
+    readonly __microdeltaAcquiredPage: unique symbol;
+    // (undocumented)
+    readonly data: object;
+    // (undocumented)
+    readonly kind: 'acquired-page';
+    // (undocumented)
+    readonly reference: ICompletedResultReference;
+}
 
 // @alpha
 export type IAdmissionDecision = {
@@ -172,7 +185,9 @@ export type IFoldOutcome = IOutcomeEvidence & ({
 // @alpha
 export interface IFoldRequest {
     readonly lease: IWriterLease;
+    readonly normalRequestKey?: string;
     readonly requestKey: string;
+    readonly sourceEvidence?: IRequestSourceEvidence;
     readonly step: IBindingDescriptor;
 }
 
@@ -183,6 +198,14 @@ export interface IFoldResolution {
     readonly members: readonly IMemberResolution[];
     readonly outcome: IFoldOutcome;
     readonly over: IBindingDescriptor;
+}
+
+// @alpha
+export interface IFrontierOffer {
+    // (undocumented)
+    readonly __microdeltaFrontierOffer: unique symbol;
+    // (undocumented)
+    readonly kind: 'frontier-offer';
 }
 
 // @alpha
@@ -329,6 +352,14 @@ export type IRecoveryResult = {
 export type IRefusalDisposition = 'denied' | 'cancelled';
 
 // @alpha
+export interface IRequestSourceEvidence {
+    // (undocumented)
+    readonly __microdeltaRequestSourceEvidence: unique symbol;
+    // (undocumented)
+    readonly kind: 'request-source-evidence';
+}
+
+// @alpha
 export interface IResolution {
     check(request: ICheckRequest): Promise<ICheckOutcome>;
     recover(request: IRecoverRequest): IRecoveryResult;
@@ -336,6 +367,7 @@ export interface IResolution {
     resolveFold(request: IFoldRequest): Promise<IFoldResolution>;
     resolveMembers(request: IMembersRequest): Promise<IMembersResolution>;
     resolveOutcomeFold(request: IFoldRequest): Promise<IOutcomeFoldResolution>;
+    readonly traversals?: ITraversalResolutionPort;
 }
 
 // @alpha
@@ -377,6 +409,7 @@ export interface IResolutionOptions<TInputs extends object, THelpers extends obj
     readonly host: IResolutionHost;
     readonly observer?: ILifecycleObserver;
     readonly tracking: ITrackingObserver;
+    readonly traversalAuthority?: ITraversalRunAuthority;
 }
 
 // @alpha
@@ -429,6 +462,24 @@ export type IResultView<T> = T extends object ? ITrackedView<T> : never;
 
 // @alpha
 export type IReuseBasis = 'finality' | 'check' | 'validated';
+
+// @alpha
+export interface IRootAcquisition {
+    // (undocumented)
+    acquire(request: ITraversalPageRequest): Promise<ITraversalPageOutcome>;
+    // (undocumented)
+    readonly binding: ITraversalBinding;
+    // (undocumented)
+    capture(offer: IFrontierOffer, normalRequestKey: string): IRequestSourceEvidence;
+    complete(): void;
+    // (undocumented)
+    continuation(page: IAcquiredPage, path: readonly string[]): ITraversalContinuation;
+    // (undocumented)
+    dispose(): void;
+    // (undocumented)
+    offer(page: IAcquiredPage, evidence: object): IFrontierOffer;
+    stop(): void;
+}
 
 // @alpha
 export interface ISourceBindings<TInputs extends object, THelpers extends object> extends IStepBindings<TInputs, THelpers> {
@@ -488,6 +539,53 @@ export type ISupervisedExecution<T> = {
 export type ITrackedHelpers<THelpers extends object> = {
     readonly [K in keyof THelpers]: ITrackedView<THelpers[K]>;
 };
+
+// @alpha
+export interface ITraversalContinuation {
+    // (undocumented)
+    readonly __microdeltaTraversalContinuation: unique symbol;
+    // (undocumented)
+    readonly kind: 'traversal-continuation';
+}
+
+// @alpha
+export type ITraversalPageOutcome = {
+    readonly kind: 'accepted';
+    readonly page: IAcquiredPage;
+    readonly outcome: Extract<IResolutionOutcome, {
+        readonly kind: 'published' | 'reused';
+    }>;
+} | {
+    readonly kind: 'refused';
+    readonly outcome: Extract<IResolutionOutcome, {
+        readonly kind: 'refused';
+    }>;
+};
+
+// @alpha
+export interface ITraversalPageRequest {
+    // (undocumented)
+    readonly continuation?: ITraversalContinuation;
+    // (undocumented)
+    readonly lease: IWriterLease;
+    // (undocumented)
+    readonly requestKey: string;
+}
+
+// @alpha
+export interface ITraversalResolutionPort {
+    dispose(): void;
+    // (undocumented)
+    open(witness: unknown): IRootAcquisition;
+}
+
+// @alpha
+export interface ITraversalRunAuthority {
+    // (undocumented)
+    assertRoot(): void;
+    // (undocumented)
+    currentOwner(): object | undefined;
+}
 
 // @alpha
 export type IUntrackedRead = <V extends ITracked<object>, K extends IUntrackedKey<V>>(value: V, key: K) => V[K];

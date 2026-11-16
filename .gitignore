@@ -11,3 +11,6 @@ scratch/
 
 # Claude Code local configuration (auto-added)
 .claude/*.local.*
+
+# Revision-bound PR preparation and per-shard receipts are generated locally.
+.pr-ci/

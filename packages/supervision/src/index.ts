@@ -63,10 +63,29 @@ export type {
   ISendPhase,
   ISendRequest,
   IStrictFoldOutcome,
+  ITraversalAdapter,
+  ITraversalAdaptation,
+  ITraversalReport,
   ISupervision,
   ISupervisionOptions,
 } from './contracts.js';
 export { ordinaryLifecycle, stepLifecycle, type IStepLifecycle } from './lifecycle.js';
+export {
+  createSharedRateCoordinator,
+  type IRunElapsedClock,
+  type IRunEpochClock,
+  type ISharedRateAdmission,
+  type ISharedRateCommitResult,
+  type ISharedRateCoordinator,
+  type ISharedRateCoordinatorOptions,
+  type ISharedRateErrorCode,
+  type ISharedRateGateDeclaration,
+  type ISharedRateLimit,
+  type ISharedRateReservation,
+  type ISharedRateSurface,
+  type ISharedRateSurfaceDeclaration,
+  SharedRateCoordinatorError,
+} from './shared-rate-coordinator.js';
 export {
   blocksCollection,
   blocksFormat,
@@ -97,6 +116,14 @@ export {
   type IOperationStatus,
   type IOperationSubject,
   type IOperationUsage,
+  type IRetryDecision,
+  type IRetryDecisionInput,
+  type IRetryAttemptSummary,
+  type IRetryFacts,
+  type IRetryHistory,
+  type IRetryOutcome,
+  type IRetrySourceScope,
+  type ISourceRetryPolicy,
   type IOperationView,
   type IRequestAttemptStatus,
   type IRequestAttemptView,
@@ -114,3 +141,8 @@ export type {
   IRunResultReference,
 } from './promotion.js';
 export { createSupervision } from './supervision.js';
+
+export type { IOperationSharedRate, ISharedRateDispatchOptions } from './shared-rate-dispatch.js';
+
+export { openExecutionObservationReader } from './observation.js';
+export type { IApplicationStatement, IApplicationStatementSubmission, IExecutionObservation, IExecutionObservationHost, IExecutionObservationEventCounts, IExecutionObservationFaultCount, IExecutionObservationLocator, IExecutionObservationReadResult, IExecutionObservationReadState, IExecutionObservationReader, IObservationAcknowledgment, IObservedRun } from './observation.js';

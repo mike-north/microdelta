@@ -7,7 +7,7 @@
  * - declared helpers as tracked functions, so an actually called helper's
  *   implementation becomes evidence and an uncalled one does not;
  * - a child call's result as a lazy view over its exact retained data, and a
- *   supplied step's arguments as views observed under `argument` bindings;
+ *   supplied memo or source's arguments as views observed under `argument` bindings;
  * - own-member presence through the same observer that owns the input views;
  * - an explicit observed untracked read, the only way a callback reads a
  *   tracked member without consuming it;

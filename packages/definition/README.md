@@ -30,6 +30,26 @@ imports Tracking, History or Resolution; the facade chooses those meanings.
   Versions are positive safe integers, default 1 (REUSE-008). Declaring never
   invokes a callback, and declarations retain the author's actual functions.
 
+## Callable sources
+
+`sourceSlot<P, R>({ slot })` declares a possible source edge before graph freeze.
+`suppliedSource<P, R>({ run, finality?, version?, label? })` declares source policy
+without its own subject or children. `supplySource({ slot, declaration, subject })`
+binds exactly one matching source implementation and an author subject function
+over derived argument values. Source and memo slots cannot substitute for one
+another; missing and ambiguous occupants remain distinct correspondence failures.
+
+A memo calls the source slot with the existing argument recipes. Both source
+callbacks receive tracked `args`, current source bindings and the eligible
+`previous` carrier (optional for `run`, required for `finality`). The source uses
+explicit fresh/retain outcomes, while a supplied memo returns computed data.
+Equal slot/subject/version/argument values may share within one request, including
+across people. Author subject text is preserved without a hidden person prefix.
+
+The [selected contract](../../docs/plans/scoped-source-calls.md) and
+[typed completed-search fixture](../core/test/source-call/fixture.ts) show the
+bounded consumer. These spellings remain project-private alpha declarations.
+
 ## Supported M3 topology
 
 `compose({ scope, inputs?, helpers?, members })` freezes framework-owned copies
